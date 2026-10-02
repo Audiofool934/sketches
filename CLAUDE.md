@@ -31,9 +31,23 @@ Use a 3D renderer only when the idea fails as a drawing.
 | Scene you orbit or walk through in the browser | Three.js, in the same HTML page if it fits. | Blender |
 | Path-traced materials, cloth, or a lit film shot | Blender, driven by Python. | The browser |
 | The deliverable is an MP4 of a page you already drew | Playwright seeks `window.seek(t)`, ffmpeg encodes. | A second animation framework |
+| A wall of many stones that lift and catch light | WebGL2 instanced boxes, one HTML file, no libraries. | Canvas `fillRect` for the stones, Three.js, a mosaic filter on a photo |
 
 SVG fits a short vector loop with a few shapes.
 Canvas 2D fits many marks, brushes, particles, type, and anything that must be a pure function of time.
+A mosaic wall is still a drawing.
+The stones are the picture.
+Paint it flat, with thick contours and a few colors, then snap one color per stone.
+Vary the golds and the silvers per stone.
+Leave mortar by making each stone smaller than its cell.
+Break the square grid with a running bond, a little jitter, and a turn that follows the contour.
+Give every stone its own tilt, so one light glints them one at a time.
+When the picture changes, the same stones lift, tumble, and seat.
+Stones whose color barely changes only shiver.
+A few tens of thousands fill a 1920 frame.
+The loop rests on a finished wall, with the light back where it started.
+`piece/laid-glass` is that wall.
+
 Three.js is the 3D renderer for a sketch, because the piece still opens in a browser.
 Blender is for a shot you would light like a film.
 Do not install it for a loop.
