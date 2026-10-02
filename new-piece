@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Start an independent animation branch and check it out under .pieces/.
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: new-piece <slug>" >&2
+  exit 2
+fi
+
+slug="$1"
+if [[ ! "$slug" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  echo "slug must be lowercase words separated by hyphens, like lighthouse-sunset" >&2
+  exit 2
+fi
+
+if [[ -f .git ]]; then
+  echo "run new-piece from the main checkout, not from inside a piece" >&2
+  exit 1
+fi
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+branch="piece/$slug"
+dest=".pieces/$slug"
+title=${slug//-/ }
+
+if git show-ref --verify --quiet "refs/heads/$branch"; then
+  echo "$branch already exists" >&2
+  exit 1
+fi
+
+if [[ -e "$dest" ]]; then
+  echo "$dest already exists" >&2
+  exit 1
+fi
+
+if ! git diff --quiet -- pieces.md || ! git diff --cached --quiet -- pieces.md; then
+  echo "pieces.md has uncommitted changes. Commit or stash them first." >&2
+  exit 1
+fi
+
+mkdir -p .pieces
+git worktree add --quiet --orphan -b "$branch" "$dest"
+
+committed=0
+cleanup() {
+  if [[ "$committed" -eq 0 ]]; then
+    git reset --quiet -- pieces.md >/dev/null 2>&1 || true
+    git checkout --quiet -- pieces.md >/dev/null 2>&1 || true
+    git worktree remove --force "$dest" >/dev/null 2>&1 || true
+    git branch -D "$branch" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
+
+sed -e "s/{{slug}}/${slug}/g" -e "s/{{title}}/${title}/g" templates/index.html > "$dest/index.html"
+sed -e "s/{{slug}}/${slug}/g" -e "s/{{title}}/${title}/g" templates/brief.md > "$dest/brief.md"
+printf '%s\n' '.DS_Store' > "$dest/.gitignore"
+
+git -C "$dest" add index.html brief.md .gitignore
+git -C "$dest" commit --quiet -m "Start ${slug}"
+
+printf -- '- %s: %s/index.html\n' "$branch" "$dest" >> pieces.md
+git add pieces.md
+git commit --quiet -m "Index ${branch}"
+
+committed=1
+trap - EXIT
+
+echo "$branch is checked out at $dest"
+echo "open $dest/index.html"
