@@ -3,6 +3,7 @@
 //
 //   node tools/render.mjs --out out --w 1920 --fps 60 --sub 4
 //   node tools/render.mjs --out preview --w 640 --fps 30 --sub 1
+//   --angle metal|swiftshader picks the WebGL backend; --playwright points at playwright's index.mjs
 //
 // Segments are kept, so a stopped render picks up where it left off.
 import http from "node:http";
@@ -57,7 +58,12 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const port = server.address().port;
 
-const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+// A real GPU where there is one (Metal on a Mac), SwiftShader on a machine without one.
+const angle = args.angle || (process.platform === "darwin" ? "metal" : "swiftshader");
+const flags = angle === "swiftshader"
+  ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
+  : ["--headless=new", `--use-angle=${angle}`, "--enable-webgl", "--ignore-gpu-blocklist"];
+const browser = await chromium.launch({ args: flags });
 const page = await browser.newPage({ viewport: { width: Math.max(W, 640), height: Math.max(H, 360) } });
 page.on("pageerror", (e) => {
   console.error("pageerror:", e.message.slice(0, 2000));

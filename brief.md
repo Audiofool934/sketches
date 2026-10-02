@@ -2,8 +2,13 @@
 
 ## Stack
 
-WebGL2, one HTML file, no libraries.
-The stones are the picture, and each one has to drop, turn in the light and cast a shadow, so they are real geometry: about eighteen thousand bevelled stones, drawn as one merged mesh that pulls each stone's data from a float texture.
+mosaic.
+One HTML file.
+No libraries.
+
+The panel-laid grammar from `stacks/mosaic.md`: direct method, sinopia on the bare bed, laid from the eye outward, border last, camera pulling back from macro.
+About eighteen thousand bevelled stones. Each one drops, turns in the light and casts a shadow, so they are real geometry in WebGL2.
+The stones are one merged mesh that pulls each stone's data from a float texture, instead of instanced boxes: SwiftShader, the only renderer on a machine without a GPU, spends about six times longer on 18k instances than on the same geometry merged.
 Canvas 2D paints the flat picture and the sinopia once, offscreen. The tessellation reads them.
 Playwright seeks `window.seek(t)`, ffmpeg encodes.
 
@@ -46,19 +51,21 @@ Mortar shows between every stone.
 
 0.0 to 0.8. Macro, oblique, shallow focus. Bare rough coat in cold light with the lantern drawn on it in red sinopia. The camera breathes.
 0.8 to 2.4. Hook. The first flame stone drops, turns once and seats. It glows as it lands and the warm light comes on over the bed. The camera adapts down as the flame fills.
-2.4 to 4.0. The lantern's amber panes, then its dark cage and brass cap. Fresh lime is spread just ahead of each stone and hides the drawing.
-4.0 to 6.0. The halo goes down ring by ring. Odysseus's hand, arm, face and cap. The camera starts to pull back.
-6.0 to 9.0. Odysseus's tunic and crimson cloak, then the first of the crew stands up out of the bare mortar ahead of the sky around him.
-9.0 to 13.0. The crew one by one, shields and crests, spears into the sky. The river of ice behind them, the steam and the river of fire.
-13.0 to 19.0. The camera reaches the whole panel. Basalt, mountains, glacier, volcano and the blue sky are laid in courses. The last stones are the corners.
-18.7 to 22.4. The border goes on last: two runs of the meander start at the bottom centre and meet at the top.
-22.4 to 26.0. The finished panel. The lantern's light sways as if carried on the march, and the gold glints move with it. A slow push in.
+2.4 to 4.2. The lantern's amber panes, then its dark cage and brass cap. Fresh lime is spread just ahead of each stone and hides the drawing.
+4.2 to 6.5. The halo goes down ring by ring. Odysseus's hand, arm, face and cap. The camera starts to pull back.
+6.5 to 10.0. Odysseus's tunic and crimson cloak, then the crew stand up one by one out of the bare mortar, ahead of the sky around them. Shields and crests, spears into the sky. The river of ice behind them.
+10.0 to 14.0. The last of the crew, the steam and the river of fire, the rock where the rivers meet, the glacier and the mountains.
+14.0 to 17.4. The camera reaches the whole panel. Basalt and the blue sky are laid in courses into the corners.
+17.0 to 21.4. The border goes on last: two runs of the meander start at the bottom centre and meet at the top.
+21.4 to 26.0. The finished panel. The lantern's light sways as if carried on the march, and the gold glints move with it. A slow push in.
 
 ## Motion
 
 Duration: 26 seconds. Frame size: 1920 by 1080. One shot, not a loop.
 The front moves out from the lantern along geodesic distance. Figures carry it 2.6 times faster than the ground, so each man stands up before the background around him.
 Each course is started where the front first reaches it and then laid stone after stone along the row.
+After the first four seconds the seat times are remapped by rank, so the pace rises to about 1100 stones a second, holds, and eases into the corners without a lull.
+The camera keys are written against the build and retimed by the same map.
 A stone drops a little more than two of its own sizes, tumbles less than a turn, and seats with a damped spring: omega 36, zeta 0.4.
 Camera: monotone cubic through keys in log width, tilt 50 to under 1 degree, arriving at rest.
 Exposure adapts once, when the lamp catches.
@@ -77,3 +84,15 @@ Gaps no course reached get their own cut stones.
 Tesserae are picked from each region's tray, so gradients come out as a mix of neighbouring shades.
 Rim light on the figures is its own course of warm stones on the side that faces the lantern, and blue on the side that faces the sky.
 Seeded noise only. Every frame is a pure function of t.
+
+## Render
+
+Open `index.html` to watch it live. `?t=12` holds one frame, `?w=960` renders smaller, `?sub=4` turns on the film's motion blur.
+`?view=color`, `?view=labels` and `?view=tiles&cx=1100&cy=400&zoom=6` show the flat picture, the regions, and the laid stones in 2D.
+
+```bash
+node tools/render.mjs --out out --w 1920 --fps 60 --sub 4
+```
+
+Playwright seeks every frame, the page posts raw pixels back, ffmpeg keeps lossless segments so a stopped render resumes, and the finish is H.264, `yuv420p`, CRF 16.
+On a 4-core machine with SwiftShader and no GPU, the film takes about two hours.
