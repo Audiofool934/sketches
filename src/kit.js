@@ -117,7 +117,7 @@
   function runs(ctx, parts, x, y, base, draw = true, align = "left") {
     const widths = parts.map((p) => {
       const size = p.size || base.size;
-      if (p.arrow) return size * 0.72;
+      if (p.arrow) return size * 0.9;
       if (p.gap) return size * p.gap;
       font(ctx, p.kind || base.kind, size, { italic: p.italic, weight: p.weight || base.weight });
       if (p.track) ctx.letterSpacing = `${p.track}px`;
@@ -134,7 +134,7 @@
       const size = p.size || base.size;
       const color = p.color || base.color;
       if (p.arrow) {
-        arrowGlyph(ctx, cx + size * 0.08, y - size * 0.27, size * 0.56, size * 0.05, color);
+        arrowGlyph(ctx, cx + size * 0.17, y - size * 0.27, size * 0.56, size * 0.05, color);
       } else if (!p.gap) {
         font(ctx, p.kind || base.kind, size, { italic: p.italic, weight: p.weight || base.weight });
         if (p.track) ctx.letterSpacing = `${p.track}px`;

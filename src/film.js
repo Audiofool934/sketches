@@ -429,9 +429,9 @@
 
     // the split: labels and headline
     if (t >= T.flipsA[0] - 0.1) {
-      printLabels(ctx, t, ["24", "28"], ["200", "204"], T.flipsA[0], T.strip, "+4 mm");
-      const h1 = phase(t, T.same, T.strip);
-      const h2 = phase(t, T.different, T.strip + 0.05);
+      printLabels(ctx, t, ["24", "28"], ["200", "204"], T.flipsA[0], T.strip - 0.25, "+4 mm");
+      const h1 = phase(t, T.same, T.strip - 0.3);
+      const h2 = phase(t, T.different, T.strip - 0.25);
       const base = { kind: "serif", size: 128, color: C.ink };
       riseRuns(ctx, [{ s: "Same " }, { s: "4 mm", color: C.accent }, { s: "." }], PL.x, 215, base, h1.in, h1.out);
       riseRuns(ctx, [{ s: "Different jump.", italic: true }], PR.x, 215, base, h2.in, h2.out);
@@ -609,7 +609,9 @@
       const fBase = t < T.long ? 24 : 200;
       const yb = camY + fBase * s;
       const ys = camY + f * s;
-      vdim(ctx, xd, camY, lerp(camY, t < T.plus ? ys : yb, inP), C.ink, 1 - out);
+      // the line measures to the sensor, except while the orange 4 mm is shown on its end
+      const split = (t >= T.plus && t < T.long) || t >= T.plus200;
+      vdim(ctx, xd, camY, lerp(camY, split ? yb : ys, inP), C.ink, 1 - out);
       hline(ctx, camX + hw * 0.6, xd + 14, camY, C.dim, 1.5, [5, 6], inP * (1 - out));
       const accP = t < T.long ? (t >= T.plus ? sp(t - T.plus, SPR.ui) : 0) : t >= T.plus200 ? sp(t - T.plus200, SPR.ui) : 0;
       const accOut = t < T.long ? ease.inCubic(clamp((t - (T.long - 0.25)) / 0.25)) : out;
@@ -890,7 +892,7 @@
     const eqs = { kind: "mono", size: 54, color: C.ink };
     riseRuns(ctx, [{ s: "24–28" }], rulerX(26, 0), RUL.upY - 64, eqs, el.in, el.out, "center");
     riseRuns(ctx, [{ s: "200–204" }], rulerX(202, 0), RUL.upY - 64, eqs, el.in, el.out, "center");
-    const h1 = phase(t, T.equal + 0.4, T.morph, SPR.type, 0.3);
+    const h1 = phase(t, T.ruler + 1.5, T.morph, SPR.type, 0.3);
     riseRuns(ctx, [{ s: "In millimeters, the same size." }], 60, HY, head, h1.in, h1.out);
     const h2 = phase(t, T.morph + 0.3, T.morphEnd, SPR.type, 0.3);
     riseRuns(ctx, [{ s: "Now space the blocks by ratio." }], 60, HY, head, h2.in, h2.out);
@@ -920,7 +922,7 @@
     const rl2 = phase(t, T.morphEnd + 0.15, T.slide, SPR.type, 0.3);
     riseRuns(ctx, [{ s: "200–204" }], rulerX(202, 1), BY + 64, eqs, rl2.in, rl2.out, "center");
     const h3 = phase(t, T.morphEnd + 0.2, T.slide, SPR.type, 0.3);
-    riseRuns(ctx, [{ s: "By ratio, " }, { s: "24–28", color: C.accent }, { s: " is 8× longer." }], 60, HY, head, h3.in, h3.out);
+    riseRuns(ctx, [{ s: "By ratio, " }, { s: "24–28", color: C.accent }, { s: " is almost 8× longer." }], 60, HY, head, h3.in, h3.out);
 
     // the 24-28 step slides along to 200-233
     if (t >= T.slide) {
@@ -1017,7 +1019,8 @@
     const rOut = t < T.answer ? 0 : ease.inCubic(clamp((t - T.answer) / 0.4));
     if (rOut < 1) {
       ctx.save();
-      ctx.translate(0, rOut * 120);
+      ctx.translate(0, rOut * 160);
+      ctx.globalAlpha = 1 - rOut;
       drawLower(ctx, t);
       const L = lowerLayout(t);
       for (const c of cues.ratchet1) {

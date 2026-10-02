@@ -23,7 +23,7 @@ The soundtrack is synthesized in plain JavaScript from the same clock (`src/cloc
 
 ## Limits
 
-Duration: 75 s, 30 bars at 96 BPM (one beat is 0.625 s, one bar is 2.5 s).
+Duration: 72.5 s, 29 bars at 96 BPM (one beat is 0.625 s, one bar is 2.5 s).
 Frame size: 1920 × 1080, 60 fps, 4 motion-blur subframes per frame (180° shutter).
 Loop or one-shot: one-shot.
 
@@ -100,7 +100,7 @@ Every state change lands on a beat. Hero reveals land on a downbeat.
 ### B. The geometry, 0:10–0:32.5
 
 - 10.00 The right print leaves. The left print lifts and widens into a strip of the whole harbor, and its edges become the lit window of a field of view.
-- 11.25 A lens and a sensor arrive below. Two rays draw from the sensor's edges through the lens to the window's edges.
+- 10.63 A lens and a sensor arrive below. Two rays draw from the sensor's edges through the lens to the window's edges.
 - 12.50 Dimension line: focal length, 24 mm, lens to sensor.
 - 13.75 Angle arc: 73.7°.
 - 15.00 An orange 4 mm block extends the dimension. The sensor drops 4 mm. The wedge and the window narrow. 73.7° rolls to 65.5°.
@@ -133,13 +133,13 @@ Every state change lands on a beat. Hero reveals land on a downbeat.
 - 56.25 Caption "×1.17 per click". 14 clicks to 208 mm. Even steps, even marks, and the pitch climbs in even steps.
 - 61.25 "Equal ratios look equal."
 
-### E. Answer, 1:02.5–1:15
+### E. Answer, 1:02.5–1:12.5
 
 - 62.50 The two prints return: left 24 ↔ 28, right 200 ↔ 233, flipping on the beat. Orange "×1.17" under both.
 - 65.00 "Different mm. Same jump."
 - 67.50 The iris closes.
 - 68.13 Lockup: "Count in ratios, not millimeters."
-- 75.00 End on the held line.
+- 72.50 End on the held line.
 
 ## Motion
 
@@ -168,3 +168,22 @@ Fix the three worst problems by timestamp until every score holds at 8.
 Check a fast-action strip, a 360 px phone sheet, and that the last frame holds.
 
 ## Notes
+
+Three review passes, each scored on hook, phone readability at 360 px, motion, variety, composition, and sync.
+
+Pass 1, first cut: 7, 7, 7, 8, 7, 8.
+The ruler was a thin strip in an empty frame, so part C became two rulers joined by a fan of lines.
+Labels were too small at phone width and went up to 46–60 px.
+Worst seconds: 68–75 (the end card held 7 s; the film is now 72.5 s), 10.0–11.25 (an empty frame while the strip formed; the lens now arrives at 10.63), and 33.5–35 (the ruler arrived without its headline; it now lands at 34.0).
+
+Pass 2: 8, 8, 8, 8, 8, 9.
+Sync was measured on the encoded file: every click checked lands within 3 ms of its cue.
+Worst seconds were in the mix: the +4 mm ratchet (52.5–55) and the gauge-block roll (25–27.5) were the loudest bars, and the music dipped under "Same 4 mm." (7.5–10).
+Each was rebalanced; every bar now sits between −11.6 and −19.8 LUFS, the quietest being the last.
+
+Pass 3: 8, 8, 8, 8, 8, 9.
+Two bugs at full size: during the long move (17.5–21) the dimension line measured to 200 mm instead of the moving sensor, and at 62.5 the ratchet marks stayed on screen after their ruler left.
+Both are fixed.
+
+The soundtrack has been checked by measurement (loudness per bar, true peak, spectrograms, onset timing), not by ear.
+

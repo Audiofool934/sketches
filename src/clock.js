@@ -7,7 +7,7 @@
   const BPM = 96;
   const BEAT = 60 / BPM;
   const BAR = 4 * BEAT;
-  const DURATION = 75;
+  const DURATION = 72.5;
   const FPS = 60;
 
   // bar is 1-based, beat is 0-based and may be fractional.
@@ -27,7 +27,7 @@
 
     // B. The geometry
     strip: at(5, 0),
-    lens: at(5, 2),
+    lens: at(5, 1),
     dim: at(6, 0),
     arc: at(6, 2),
     plus: at(7, 0),

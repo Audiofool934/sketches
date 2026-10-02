@@ -233,13 +233,13 @@
     };
     // bar -> [chord, pad level, arp level, bass level]
     const plan = {
-      4: ["D", 0.8, 0.7, 0.8],
+      4: ["D", 1.05, 0.9, 0.9],
       5: ["D", 1, 1, 1], 6: ["Bm", 1, 1, 1], 7: ["G", 1, 1, 1], 8: ["A", 1, 0.9, 1],
       9: ["D", 1, 1, 1], 10: ["Bm", 1, 1, 1], 11: ["G", 1, 0.8, 1], 12: ["Em", 1, 0.8, 1], 13: ["A7", 1, 0.9, 1],
       14: ["D", 1, 1, 1], 15: ["Fm", 1, 1, 1], 16: ["G", 1, 0.8, 1], 17: ["Bm9", 1.1, 1, 1.1],
       18: ["G", 1, 1, 1], 19: ["A6", 1, 1, 1], 20: ["D", 0.8, 0.5, 0.8],
       25: ["G", 0.55, 0.5, 0.5],
-      26: ["G", 1.25, 1.2, 1.2], 27: ["A6", 1.3, 1.25, 1.2], 28: ["D", 1.4, 0.9, 1.3], 29: ["D", 1.1, 0.5, 1], 30: ["D", 0.8, 0.25, 0.7],
+      26: ["G", 1.25, 1.2, 1.2], 27: ["A6", 1.3, 1.25, 1.2], 28: ["D", 1.4, 0.9, 1.3], 29: ["D", 1.0, 0.35, 0.9],
     };
     const ARP = [3, 2, 1, 2, 3, 1, 2, 0];
     for (const [barS, [name, padL, arpL, bassL]] of Object.entries(plan)) {
@@ -259,8 +259,7 @@
       for (let k = 0; k < 8; k++) {
         const t = t0 + k * (BEAT / 2);
         if (t < startAt - 1e-6) continue;
-        if (bar >= 29 && k % 2) continue;
-        if (bar === 30 && k > 3) continue;
+        if (bar >= 29 && (k % 2 || k > 4)) continue;
         const note = ch.pad[ARP[k]] + 12;
         const vel = (k % 2 ? 0.7 : 1) * (k === 0 ? 1.15 : 1);
         put(music, t, glass(note, vel, 0.42), 0.05 * arpL, ((k % 4) - 1.5) * 0.35, 0.35, 0.3);
@@ -272,7 +271,7 @@
     for (let bar = 21; bar <= 24; bar++) {
       put(music, at(bar), padNote(50, BAR, 650), 0.03, -0.4, 0.6);
       put(music, at(bar), padNote(57, BAR, 650), 0.024, 0.4, 0.6);
-      put(music, at(bar), sub(38, BAR - 0.02), 0.05, 0, 0);
+      put(music, at(bar), sub(38, BAR - 0.02), 0.032, 0, 0);
     }
     // the final chord rings out a little longer
     put(music, at(28), glass(74, 1, 1.4), 0.05, 0, 0.6, 0.2);
@@ -303,7 +302,7 @@
     }
     cues.shutter.forEach(shutter);
     // the film opens on an impact under the iris
-    put(fx, 0.02, thump(70, 34, 0.32), 0.75, 0, 0.25);
+    put(fx, 0.02, thump(70, 34, 0.32), 0.6, 0, 0.25);
     put(fx, 0.02, noiseHit(900, 0.6, 0.09, 0.6, 0.002), 0.35, 0, 0.4);
     // the clock tower ticks the beat under the opening
     for (let k = 1; k <= 11; k++) {
@@ -331,7 +330,7 @@
 
     // gauge blocks: big blocks tock low, thin ones tick high, the orange one thunks
     cues.blocksLeft.forEach((t) => put(fx, t + 0.06, tock(760), 0.34, -0.45, 0.2));
-    cues.blocksRight.forEach((t, i) => put(fx, t + 0.04, tock(2300, 0.018), 0.12, 0.45, 0.12));
+    cues.blocksRight.forEach((t, i) => put(fx, t + 0.04, tock(2300, 0.018), 0.085, 0.45, 0.12));
     put(fx, T.blockAccent + 0.05, tock(430, 0.08), 0.5, 0, 0.25);
     put(fx, T.blockAccent + 0.05, thump(90, 50, 0.09), 0.3, 0, 0);
 
@@ -372,8 +371,8 @@
       return ((x - 960) / 960) * 0.75;
     };
     cues.ratchet1.forEach(({ t, f }) => {
-      put(fx, t, ping(10 * f, 0.04, 0.22, 0.2), 0.2, hudPan(f), 0.12);
-      put(fx, t, noiseHit(6000, 2, 0.003), 0.18, hudPan(f), 0);
+      put(fx, t, ping(10 * f, 0.04, 0.22, 0.2), 0.155, hudPan(f), 0.12);
+      put(fx, t, noiseHit(6000, 2, 0.003), 0.13, hudPan(f), 0);
     });
     cues.ratchet2.forEach(({ t, f }) => {
       put(fx, t, ping(10 * f, 0.11, 0.22, 0.6), 0.22, hudPan(f), 0.2, 0.15);
@@ -451,7 +450,7 @@
       R[i] = music.R[i] + fx.R[i];
     }
     // a short fade at the very end
-    const fadeN = len(1.2);
+    const fadeN = len(1.8);
     for (let i = 0; i < fadeN; i++) {
       const g = Math.pow(Math.sin((Math.PI / 2) * (i / fadeN)), 2);
       L[N - 1 - i] *= g;
