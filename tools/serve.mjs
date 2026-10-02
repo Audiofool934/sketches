@@ -1,5 +1,5 @@
-// A tiny static server for the repository root, so the animation page can import its
-// own modules and, for the finale, Sway's real instrument modules from web/instrument.
+// A tiny static server for this folder, so the animation page can import its own
+// modules and, for the finale, Sway's real instrument modules from vendor/sway.
 // Run directly for a live preview, or import startServer() from the renderers.
 
 import { createReadStream, existsSync, statSync } from "node:fs";
@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -84,5 +84,5 @@ export function startServer(port = 0) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { url } = await startServer(Number(process.env.PORT) || 8766);
-  console.log(`Preview: ${url}/animation/index.html`);
+  console.log(`Preview: ${url}/index.html`);
 }

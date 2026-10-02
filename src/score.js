@@ -5,7 +5,7 @@
 // Sway's own ladder (A minor pentatonic, A3 to G5) over Sway's own four chords, so the
 // finale, played by Sway's real band, is the same tune in its newest material.
 
-import { CHORDS, WORLD } from "../../web/instrument/theory.js";
+import { CHORDS, WORLD } from "../vendor/sway/theory.js";
 import { BAR, BEAT, atBar, byId } from "./timeline.js";
 
 export const LADDER = WORLD.ladder; // [57, 60, 62, 64, 67, 69, 72, 74, 76, 79]

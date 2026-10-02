@@ -1,6 +1,6 @@
 // Render the finale's soundtrack with Sway's own synthesizer and band, in headless Chromium.
 //   node audio/finale.mjs        -> out/finale.wav (stereo float, 48 kHz, starting at bar 72)
-// The page (finale-page.js) imports web/instrument/*.js directly from the repository.
+// The page (finale-page.js) imports Sway's instrument modules from vendor/sway.
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -21,7 +21,7 @@ page.on("pageerror", (error) => console.error("page error:", error.message));
 page.on("console", (message) => {
   if (message.type() === "error") console.error("console:", message.text());
 });
-await page.goto(`${server.url}/animation/audio/finale.html`);
+await page.goto(`${server.url}/audio/finale.html`);
 await page.waitForFunction(() => window.finaleReady === true, null, {
   timeout: 30000,
 });

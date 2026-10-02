@@ -1,7 +1,7 @@
 # Between Hand and Sound
 
 A 3 minute 41 second animated history of the machines between a plucked string and an instrument you play with your hands.
-Sway is a generative instrument.
+[Sway](https://github.com/Audiofool934/sway) is a generative instrument.
 This film explains where its parts come from, and the picture and the music are both made from code.
 
 The film tells the history as a chain of re-representations.
@@ -44,8 +44,9 @@ Everything is generated; there are no recorded samples, stock footage, or stock 
   There are additive strings, a pipe organ, a music box, a piano and pianola with inharmonic overtones, a theremin, a tonewheel organ, a subtractive synth, FM keys, and 808-style drums.
   Each era is also processed like its medium: the wax cylinder is band-limited, saturated, and crackly, and the tape stem has a head bump, wow, flutter, hiss, and a tape stop.
   The Count chapter lowers the sample rate and bit depth on purpose, then restores them.
-- **Sound, chapter 11.** `audio/finale.mjs` renders the Play chapter with Sway's own `Synth`, `bandStep`, and `Looper` from `web/instrument/`, in an offline audio context in headless Chromium.
-  `audio/finale-page.js` repeats the scheduling in `web/instrument/engine.js` (swing, energy changes on downbeats, loop capture, the choke-and-resolve ending) and takes its performance from a script instead of a camera.
+- **Sound, chapter 11.** `audio/finale.mjs` renders the Play chapter with Sway's own `Synth`, `bandStep`, and `Looper`, in an offline audio context in headless Chromium.
+  Copies of those modules live in `vendor/sway/`.
+  `audio/finale-page.js` repeats the scheduling in Sway's `web/instrument/engine.js` (swing, energy changes on downbeats, loop capture, the choke-and-resolve ending) and takes its performance from a script instead of a camera.
 - **One clock.** `src/timeline.js` defines the bars, and `src/score.js` holds the tune and the cue sheets the picture and the soundtrack share, so a drawbar moves when its chord starts and a step lights when its drum hits.
   `audio/master.mjs` balances the chapters (the film opens quietly and builds), mixes in the finale, and normalizes the whole to -17 LUFS integrated with a -1 dBFS ceiling.
 
@@ -54,7 +55,6 @@ Everything is generated; there are no recorded samples, stock footage, or stock 
 You need Node.js 20 or later, `ffmpeg`, and Chrome (or set `SWAY_CHROME` to a Chromium executable).
 
 ```bash
-cd animation
 npm install
 npm run build             # the four steps below, in order
 ```
@@ -82,11 +82,11 @@ ffmpeg -i out/between-hand-and-sound.mp4 -i out/soundtrack.wav -map 0:v -map 1:a
 
 Other tools:
 
-- `npm run serve` serves a live preview at `http://127.0.0.1:8766/animation/index.html`; hover for play and a scrubber.
+- `npm run serve` serves a live preview at `http://127.0.0.1:8766/index.html`; hover for play and a scrubber.
 - `node tools/still.mjs 12.5 80` writes full-size frames at those times to `out/stills/`.
 - `node tools/still.mjs --sheet 48:67 --count 6 --cols 2` tiles frames from a range into one contact sheet.
 - `node tools/render.mjs --from 3600 --to 3780 --scale 0.5` renders a short, small test cut.
-- `out/` is ignored by Git; the finished film above is the one file kept in the repository.
+- `out/` is ignored by Git; the finished film above is the one rendered file kept on this branch.
 
 ## Facts the film relies on
 
@@ -113,4 +113,24 @@ Dates and attributions were checked against sources, and the captions say "tradi
   Sync was checked on the finished file by comparing audio onsets with lit drum steps and lit piano keys: the median offset is under 20 ms, with the sound slightly after the picture, and most hits fall within one 33 ms frame.
   The film has not been listened to on speakers or headphones, so mix balance and taste still need a listen.
 - The history is a path through the story, not a complete account: it follows Western and technological lines and leaves out most of the world's music.
-- The fonts (Fraunces, DM Sans, IBM Plex Mono) are bundled under the SIL Open Font License; see `assets/fonts` and [third-party notices](../THIRD_PARTY_NOTICES.md).
+- The fonts (Fraunces, DM Sans, IBM Plex Mono) are bundled under the SIL Open Font License; see `assets/fonts` and the credits below.
+
+## Fonts
+
+The film bundles Latin subsets of three typefaces, in the [Fontsource](https://fontsource.org/) packaging.
+Each is licensed under the SIL Open Font License, Version 1.1, and its license text is kept beside the font files in `assets/fonts`.
+
+- [Fraunces](https://github.com/undercasetype/Fraunces), Copyright 2020 The Fraunces Project Authors.
+- [DM Sans](https://github.com/googlefonts/dm-fonts), Copyright 2014 The DM Sans Project Authors.
+- [IBM Plex Mono](https://github.com/IBM/plex), Copyright 2017 IBM Corp.
+
+The film's music is synthesized in code and contains no recorded samples.
+
+## Where it came from
+
+The film was made in [Sway's repository](https://github.com/Audiofool934/sway), under `animation/`, and moved into this sketchbook with its history on 2 October 2026.
+The first three commits on this branch are that history.
+
+`vendor/sway/` holds unchanged copies of the five Sway modules the film imports: `theory.js`, `clock.js`, `band.js`, `looper.js`, and `synth.js`.
+They come from Sway at commit `fd0fa97`, the version the film was built and rendered against, so the finale keeps sounding the way Sway sounded then.
+To hear a newer Sway in the finale, copy the modules again and rebuild.

@@ -27,7 +27,7 @@ const NOTES = SCRIPT.notes;
 const LEVELS = SCRIPT.levels;
 const LEVEL_NAMES = ["AIR", "PULSE", "GROOVE", "DRIVE", "PEAK"];
 
-// Sway's palette (web/instrument/style.css and overlay.js).
+// Sway's palette (from web/instrument/style.css and overlay.js in Sway's repository).
 const LEAD = "#ffb547";
 const BAND = "#4fd1c5";
 const LOOP = "#ffd699";

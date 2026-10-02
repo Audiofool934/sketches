@@ -1,5 +1,5 @@
 // The finale's soundtrack, rendered in a browser page by Sway's own synthesizer and band.
-// This page replays the scheduling logic of web/instrument/engine.js offline: the same band
+// This page replays the scheduling logic of Sway's engine.js offline: the same band
 // patterns (band.js), the same synth voices (synth.js), the same swing, energy changes that
 // land on downbeats, loop capture, and the choke-and-resolve ending, driven by the film's
 // performance script (src/score.js playScript) instead of a camera.
@@ -9,13 +9,13 @@ import {
   bandStep,
   progressionFor,
   STEPS_PER_BAR,
-} from "/web/instrument/band.js";
-import { applySwing } from "/web/instrument/clock.js";
-import { Looper } from "/web/instrument/looper.js";
-import { Synth } from "/web/instrument/synth.js";
-import { WORLD, chordAt } from "/web/instrument/theory.js";
-import { playScript } from "/animation/src/score.js";
-import { BEAT, SR, atBar } from "/animation/src/timeline.js";
+} from "/vendor/sway/band.js";
+import { applySwing } from "/vendor/sway/clock.js";
+import { Looper } from "/vendor/sway/looper.js";
+import { Synth } from "/vendor/sway/synth.js";
+import { WORLD, chordAt } from "/vendor/sway/theory.js";
+import { playScript } from "/src/score.js";
+import { BEAT, SR, atBar } from "/src/timeline.js";
 
 const STEP = 0.25;
 const LOOP_PANS = [-0.35, 0.35, -0.15, 0.15];

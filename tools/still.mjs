@@ -41,7 +41,7 @@ page.on("pageerror", (error) => console.error("page error:", error.message));
 page.on("console", (message) => {
   if (message.type() === "error") console.error("console:", message.text());
 });
-await page.goto(`${server.url}/animation/index.html?render`);
+await page.goto(`${server.url}/index.html?render`);
 await page.evaluate(() => window.film.ready);
 
 const files = [];

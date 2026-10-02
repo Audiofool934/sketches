@@ -2,8 +2,8 @@
 // that era's instruments and through that era's recording medium. Times are film seconds
 // from src/timeline.js, so every sound lands where the picture expects it.
 
-import { applySwing } from "../../web/instrument/clock.js";
-import { WORLD } from "../../web/instrument/theory.js";
+import { applySwing } from "../vendor/sway/clock.js";
+import { WORLD } from "../vendor/sway/theory.js";
 import { BAR, BEAT, atBar, byId } from "../src/timeline.js";
 import { MOTIF, cues, chordOfBar, motif, repeatCue } from "../src/score.js";
 import { SR, Biquad, filter, reversed, rng, saturate, wobble } from "./dsp.js";

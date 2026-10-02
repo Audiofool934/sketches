@@ -1,6 +1,6 @@
 // The film's shared clock. The picture and the soundtrack both read this file, so a
 // chapter starts on the same bar line in both. Tempo and key are Sway's own world
-// (see web/instrument/theory.js): A minor at 100 BPM.
+// (see vendor/sway/theory.js): A minor at 100 BPM.
 
 export const W = 1920;
 export const H = 1080;

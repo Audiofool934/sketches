@@ -42,7 +42,7 @@ for (let i = 0; i < workers; i++) {
     console.error("page error:", error.message);
     process.exitCode = 1;
   });
-  await page.goto(`${server.url}/animation/index.html?render`);
+  await page.goto(`${server.url}/index.html?render`);
   await page.evaluate(() => window.film.ready);
   pages.push(page);
 }

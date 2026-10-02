@@ -2,7 +2,7 @@
 // playhead (the Line) ticks across its grid with Sway's light swing. Then a MIDI cable carries
 // "which note, how hard" from a keyboard to a synth, and a sampler turns a recording into pads.
 
-import { applySwing, removeSwing } from "../../../web/instrument/clock.js";
+import { applySwing, removeSwing } from "../../vendor/sway/clock.js";
 import {
   FONT,
   PALETTE,
