@@ -39,3 +39,4 @@ Draw every frame from time `t`.
 The picture at `t = 0` matches the picture at the end of the loop.
 Add a library only when the piece needs it.
 Keep the idea, the timing, and what you want to change in `brief.md`.
+`CLAUDE.md` is the stack guide: 2D canvas by default, Three.js or Blender only when the idea needs a 3D renderer.
