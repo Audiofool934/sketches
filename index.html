@@ -1346,6 +1346,9 @@ window.seek = function (t) {
   frame(wrap(t, DURATION));
 };
 
+// Draw the first frame at once, so a still capture shows the piece.
+window.seek(0);
+
 // Live preview only. Under Playwright navigator.webdriver is set, and nothing ticks.
 // A click pauses and resumes. With reduced motion the piece holds its first frame until clicked.
 if (!navigator.webdriver) {
@@ -1364,7 +1367,6 @@ if (!navigator.webdriver) {
     startedAt = performance.now() - shown * 1000;
   });
   window.addEventListener("resize", () => window.seek(shown));
-  window.seek(shown);
   requestAnimationFrame(tick);
 }
 </script>
