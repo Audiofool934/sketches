@@ -19,7 +19,7 @@
 </style>
 </head>
 <body>
-<canvas id="stage"></canvas>
+<canvas id="stage" role="img" aria-label="A lighthouse takes the light from the setting sun, sweeps its beam through one night, and hands the light back at sunrise."></canvas>
 <script>
 "use strict";
 
@@ -413,8 +413,8 @@ function buildTextures() {
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  const vw = canvas.clientWidth || window.innerWidth;
+  const vh = canvas.clientHeight || window.innerHeight;
   canvas.width = Math.round(vw * dpr);
   canvas.height = Math.round(vh * dpr);
   const s = Math.min(vw / W, vh / H) * dpr;
@@ -1347,12 +1347,24 @@ window.seek = function (t) {
 };
 
 // Live preview only. Under Playwright navigator.webdriver is set, and nothing ticks.
+// A click pauses and resumes. With reduced motion the piece holds its first frame until clicked.
 if (!navigator.webdriver) {
-  const startedAt = performance.now();
+  let playing = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let shown = 0;
+  let startedAt = performance.now();
   const tick = (now) => {
-    window.seek((now - startedAt) / 1000);
+    if (playing) {
+      shown = (now - startedAt) / 1000;
+      window.seek(shown);
+    }
     requestAnimationFrame(tick);
   };
+  canvas.addEventListener("click", () => {
+    playing = !playing;
+    startedAt = performance.now() - shown * 1000;
+  });
+  window.addEventListener("resize", () => window.seek(shown));
+  window.seek(shown);
   requestAnimationFrame(tick);
 }
 </script>
