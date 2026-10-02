@@ -31,13 +31,16 @@ Use a 3D renderer only when the idea fails as a drawing.
 | Scene you orbit or walk through in the browser | Three.js, in the same HTML page if it fits. | Blender |
 | Path-traced materials, cloth, or a lit film shot | Blender, driven by Python. | The browser |
 | The deliverable is an MP4 of a page you already drew | Playwright seeks `window.seek(t)`, ffmpeg encodes. | A second animation framework |
-| A wall of many stones that lift and catch light | WebGL2 instanced boxes, one HTML file, no libraries. | Canvas `fillRect` for the stones, Three.js, a mosaic filter on a photo |
+| Stones that are the picture: a wall that resettles, or a panel laid one course at a time | WebGL2 instanced boxes, one HTML file, no libraries. | Canvas `fillRect` for the stones, Three.js, a mosaic filter on a photo |
 
 SVG fits a short vector loop with a few shapes.
 Canvas 2D fits many marks, brushes, particles, type, and anything that must be a pure function of time.
-A mosaic wall is still a drawing.
+A mosaic is still a drawing.
 The stones are the picture.
-Paint it flat, with thick contours and a few colors, then snap one color per stone.
+Same stack for both builds below.
+Paint flat, with thick contours and a few colors, then snap one color per stone.
+
+The wall resettles.
 Vary the golds and the silvers per stone.
 Leave mortar by making each stone smaller than its cell.
 Break the square grid with a running bond, a little jitter, and a turn that follows the contour.
@@ -47,6 +50,21 @@ Stones whose color barely changes only shiver.
 A few tens of thousands fill a 1920 frame.
 The loop rests on a finished wall, with the light back where it started.
 `piece/laid-glass` is that wall.
+
+The panel is laid.
+Each stone is a physical object with thickness.
+It drops, tumbles, and seats in mortar, and the seated stone casts a shadow on the bed and on its neighbors.
+The mortar starts bare, with the whole picture already drawn on it in sinopia.
+Lay from the eye outward.
+The unfinished edge is the action.
+The border goes on last.
+Keep the count low enough that a stone stays an object.
+A few thousand fill a panel.
+The camera starts macro on the first stones and pulls back as the panel grows, so the stones stay large until the wide shot.
+Once a stone is seated it stays.
+The reference example is Paolo Rosson's Roman panel: https://x.com/redp314/status/2105745567712477403
+Take the build order, the shadow, the sinopia, and the pullback.
+Use a new picture under that build.
 
 Three.js is the 3D renderer for a sketch, because the piece still opens in a browser.
 Blender is for a shot you would light like a film.
@@ -170,3 +188,4 @@ Read: the READMEs for https://github.com/alexgreensh/anidoodle and https://githu
 Read the free portion of https://charliehills.substack.com/p/claude-code-motion-graphics (steps 1 and 2; the rest is paywalled).
 Read the free portion of https://aiblewmymind.substack.com/p/claude-opus-5-5-video-animations (the method; the prompt spreadsheet is paywalled).
 Earlier X posts that match this contract: https://x.com/aakashgupta/status/2105542250650624265 and https://x.com/hideki_climax/status/2105219525280948455.
+Mosaic reference, a panel laid one stone at a time: https://x.com/redp314/status/2105745567712477403
