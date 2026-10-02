@@ -57,15 +57,20 @@ function frame(t) {
   ctx.fill();
 }
 
-let startedAt = performance.now();
+// The render path calls seek(t) directly. The same t always draws the same pixels.
+window.seek = function (t) {
+  frame(((t % DURATION) + DURATION) % DURATION);
+};
 
-function tick(now) {
-  const elapsed = (now - startedAt) / 1000;
-  frame(elapsed % DURATION);
+// Live preview only. Under Playwright navigator.webdriver is set, and nothing ticks.
+if (!navigator.webdriver) {
+  const startedAt = performance.now();
+  const tick = (now) => {
+    window.seek((now - startedAt) / 1000);
+    requestAnimationFrame(tick);
+  };
   requestAnimationFrame(tick);
 }
-
-requestAnimationFrame(tick);
 </script>
 </body>
 </html>
