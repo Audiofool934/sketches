@@ -7,10 +7,12 @@ What the viewer should feel.
 
 ## Stack
 
-2D canvas.
+canvas.
 One HTML file.
 No libraries.
-Change this only if the idea needs SVG, Three.js, or Blender.
+
+The stack is one of `canvas`, `mosaic`, `three`, `blender`, or `film`.
+Read that note in `stacks/` on main before writing code.
 
 ## Look
 

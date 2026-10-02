@@ -5,14 +5,31 @@ Each piece is an orphan branch named `piece/<slug>`, checked out at `.pieces/<sl
 Work only in that folder.
 `main` is the index.
 Do not merge pieces together.
+Do not clone toolkits into this repo.
 
 The aim is a visually stunning coded animation.
 Default to 2D.
-A lot of the strong Claude Opus 5.5 and Sonnet 5.5 pieces are flat drawings, type, and UI, and they do not need a 3D renderer.
+A lot of the strong pieces are flat drawings, type, and UI, and they do not need a 3D renderer.
+
+## How the repo is split
+
+`main` holds the index, the starter, the templates, and the notes below.
+A piece holds `brief.md` and the files that draw it.
+A stack is how the picture is made.
+A grammar is a way of building inside one stack.
+A kit is an outside reference, listed in `kits.md`.
+
+Read the one stack note that matches the idea.
+Read a kit only when the brief names that look.
+A piece names its stack in `brief.md` and does not copy these notes onto its branch.
 
 ## Pick the stack before writing code
 
-Decide from the idea, then write the choice at the top of `brief.md`.
+Decide from the idea, then write the stack name at the top of `brief.md`.
+Logline and limits first.
+Look second.
+Tools last.
+If you start from a library, the technique eats the idea.
 
 Use 2D when the piece can be storyboarded as shapes, type, layers, and overlap.
 Fake depth with scale, parallax, and overlap.
@@ -26,59 +43,21 @@ Use a 3D renderer only when the idea fails as a drawing.
 
 | Idea | Stack | Leave behind |
 | --- | --- | --- |
-| Loop, UI morph, type, diagram, chart | One `index.html`. Canvas 2D or inline SVG. No libraries. | Remotion, HyperFrames, Three.js, Blender |
-| Hand-drawn or textured 2D film | Still Canvas 2D. One HTML file until a helper file earns its place. | A 3D renderer, an image model |
-| Scene you orbit or walk through in the browser | Three.js, in the same HTML page if it fits. | Blender |
-| Path-traced materials, cloth, or a lit film shot | Blender, driven by Python. | The browser |
-| The deliverable is an MP4 of a page you already drew | Playwright seeks `window.seek(t)`, ffmpeg encodes. | A second animation framework |
-| Stones that are the picture: a wall that resettles, or a panel laid one course at a time | WebGL2 instanced boxes, one HTML file, no libraries. | Canvas `fillRect` for the stones, Three.js, a mosaic filter on a photo |
+| Loop, UI morph, type, diagram, chart, ink, pixels | `canvas`. Read `stacks/canvas.md`. | Remotion, HyperFrames, Three.js, Blender |
+| Stones that are the picture | `mosaic`. Read `stacks/mosaic.md`. | Canvas `fillRect` for the stones, Three.js, a mosaic filter on a photo |
+| Scene you orbit or walk through in the browser | `three`. Read `stacks/three.md`. | Blender |
+| Path-traced materials, cloth, or a lit film shot | `blender`. Read `stacks/blender.md`. | The browser |
+| Edited multi-scene film | `film`. Read `stacks/film.md`. | A stack change just to export a loop |
 
-SVG fits a short vector loop with a few shapes.
-Canvas 2D fits many marks, brushes, particles, type, and anything that must be a pure function of time.
-A mosaic is still a drawing.
-The stones are the picture.
-Same stack for both builds below.
-Paint flat, with thick contours and a few colors, then snap one color per stone.
-
-The wall resettles.
-Vary the golds and the silvers per stone.
-Leave mortar by making each stone smaller than its cell.
-Break the square grid with a running bond, a little jitter, and a turn that follows the contour.
-Give every stone its own tilt, so one light glints them one at a time.
-When the picture changes, the same stones lift, tumble, and seat.
-Stones whose color barely changes only shiver.
-A few tens of thousands fill a 1920 frame.
-The loop rests on a finished wall, with the light back where it started.
-`piece/laid-glass` is that wall.
-
-The panel is laid.
-Each stone is a physical object with thickness.
-It drops, tumbles, and seats in mortar, and the seated stone casts a shadow on the bed and on its neighbors.
-The mortar starts bare, with the whole picture already drawn on it in sinopia.
-Lay from the eye outward.
-The unfinished edge is the action.
-The border goes on last.
-Keep the count low enough that a stone stays an object.
-A few thousand fill a panel.
-The camera starts macro on the first stones and pulls back as the panel grows, so the stones stay large until the wide shot.
-Once a stone is seated it stays.
-The reference example is Paolo Rosson's Roman panel: https://x.com/redp314/status/2105745567712477403
-Take the build order, the shadow, the sinopia, and the pullback.
-Use a new picture under that build.
-
-Three.js is the 3D renderer for a sketch, because the piece still opens in a browser.
-Blender is for a shot you would light like a film.
-Do not install it for a loop.
-
-Remotion (React timelines) and HyperFrames (HTML plus GSAP, then an MP4) are video-production stacks.
-Use one only when the brief asks for an edited multi-scene film and names that tool.
-A 6-second loop does not need either.
-
-Optional craft packs exist for drawn films: `alesha-pro` hand-drawn canvas, `alexgreensh/anidoodle`, and `iart-ai/javascript-animation-skills`.
-Read one only if the brief asks for that look.
-Do not add a pack to a plain motion loop.
+A 6-second loop is `canvas`, or `mosaic` when the stones are the picture.
+An MP4 of a page you already drew stays on the stack that drew it.
+The export steps are in the render contract below.
 
 ## Render contract
+
+This contract covers `canvas`, `mosaic`, `three`, and any `film` that is still one HTML page.
+`blender` does not use it.
+`stacks/blender.md` says what a Blender shot uses instead.
 
 Every frame is a pure function of time.
 Expose `window.seek(t)` that draws time `t` in seconds and returns.
@@ -100,16 +79,11 @@ A loop that will be posted as a GIF can stay at 15 fps, one palette, no dither.
 
 ## How to take the brief
 
-Order matters.
-Logline and limits first.
-Look second.
-Tools last.
-If you start from a library, the technique eats the idea.
-
 Write this into `brief.md` before the animation, and show it before a long render.
 
 - One sentence: what it is, and what the viewer should feel.
 - Duration, frame size, and loop or one-shot.
+- The stack name, from the table above.
 - Palette as hex. One accent. One display face and one UI face, named.
 - Banned looks: gradient behind a centered title, fade-in on everything, corner labels, frame borders, glow, invented product UI.
 - Beats with times. Something new every 2 to 4 seconds. Hook inside the first 2 seconds.
@@ -179,13 +153,3 @@ Move to Opus 5.5 when the drawing, the staging, or the critique is failing.
 High effort for the picture.
 Low effort only for a small fix.
 Set the loop length and the frame size up front so the model does not guess.
-
-## Sources
-
-Read in full: the 18-page playbook "Opus 5.5 Motion Design Prompting Techniques" (Movez, linked from https://x.com/0xMovez/status/2104576360119206296).
-Read in full: the hand-drawn canvas skill at https://github.com/alesha-pro/tools/tree/main/skills/hand-drawn-canvas-animation.
-Read: the READMEs for https://github.com/alexgreensh/anidoodle and https://github.com/iart-ai/javascript-animation-skills.
-Read the free portion of https://charliehills.substack.com/p/claude-code-motion-graphics (steps 1 and 2; the rest is paywalled).
-Read the free portion of https://aiblewmymind.substack.com/p/claude-opus-5-5-video-animations (the method; the prompt spreadsheet is paywalled).
-Earlier X posts that match this contract: https://x.com/aakashgupta/status/2105542250650624265 and https://x.com/hideki_climax/status/2105219525280948455.
-Mosaic reference, a panel laid one stone at a time: https://x.com/redp314/status/2105745567712477403
