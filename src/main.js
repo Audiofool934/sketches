@@ -44,6 +44,10 @@ window.film = {
   },
 };
 
+// The sketchbook's render contract: seek(t) draws film time t and returns.
+// Await window.film.ready first, so the fonts are in.
+window.seek = (time) => draw(time);
+
 if (!render && !params.has("t")) {
   const controls = document.getElementById("controls");
   const play = document.getElementById("play");
