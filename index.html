@@ -21,45 +21,1329 @@
 <body>
 <canvas id="stage"></canvas>
 <script>
-const DURATION = 6;
-const BG = "#14120e";
-const INK = "#f3ead7";
+"use strict";
+
+// The sun hands its light to a lighthouse at dusk and takes it back at dawn.
+// A three-ink riso print. Every mark is ink coverage on paper, and light is paper showing through.
+
+const DURATION = 12;
+const W = 1080;
+const H = 1350;
+const LETTERBOX = "#14120e";
+const PAPER = "#f2ecdf";
+const INKS = ["blue", "pink", "yellow"];
+const INK_COLOR = { blue: "#0078bf", pink: "#ff48b0", yellow: "#ffe800" };
+// Each ink sits slightly out of register, as it would off a riso drum.
+const REGISTER = { blue: [0, 0], pink: [1.6, -1.1], yellow: [-1.2, 1.5] };
+
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, u) => a + (b - a) * u;
+const smooth = (a, b, x) => {
+  const u = clamp((x - a) / (b - a));
+  return u * u * (3 - 2 * u);
+};
+const wrap = (x, m) => ((x % m) + m) % m;
+const easeIn = (u) => u * u * u;
+
+// ---------- seeded noise ----------
+
+function seeded(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Closed-form damped spring from 0 to 1, so the pose is a function of time.
+function spring(tau, k, d) {
+  if (tau <= 0) return 0;
+  const w0 = Math.sqrt(k);
+  const z = d / (2 * w0);
+  const wd = w0 * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w0 * tau) * (Math.cos(wd * tau) + ((z * w0) / wd) * Math.sin(wd * tau));
+}
+
+// ---------- the clock ----------
+
+// Monotone cubic through keys that repeat every period, so speed matches at the seam.
+function periodicSpline(keys) {
+  const n = keys.length - 1;
+  const T = keys.map((k) => k[0]);
+  const V = keys.map((k) => k[1]);
+  const span = T[n] - T[0];
+  const rise = V[n] - V[0];
+  const h = [];
+  const m = [];
+  for (let i = 0; i < n; i++) {
+    h.push(T[i + 1] - T[i]);
+    m.push((V[i + 1] - V[i]) / h[i]);
+  }
+  const d = [];
+  for (let i = 0; i < n; i++) {
+    const j = (i - 1 + n) % n;
+    d.push((3 * (h[j] + h[i])) / ((2 * h[i] + h[j]) / m[j] + (h[i] + 2 * h[j]) / m[i]));
+  }
+  d.push(d[0]);
+  return (t) => {
+    const laps = Math.floor((t - T[0]) / span);
+    const tw = t - laps * span;
+    let i = 0;
+    while (i < n - 1 && tw > T[i + 1]) i++;
+    const u = (tw - T[i]) / h[i];
+    const u2 = u * u;
+    const u3 = u2 * u;
+    const v =
+      (2 * u3 - 3 * u2 + 1) * V[i] +
+      (u3 - 2 * u2 + u) * h[i] * d[i] +
+      (-2 * u3 + 3 * u2) * V[i + 1] +
+      (u3 - u2) * h[i] * d[i + 1];
+    return v + laps * rise;
+  };
+}
+
+// The sun's angle round its day: 0 at sunrise, PI at sunset.
+// The sunset is slow, the night is long, and the day is a rush.
+const sunAngle = periodicSpline([
+  [0.0, 2.78],
+  [1.35, Math.PI + 0.1],
+  [5.3, 1.5 * Math.PI],
+  [9.2, TAU - 0.1],
+  [10.6, TAU + Math.PI / 2],
+  [DURATION, TAU + 2.78],
+]);
+
+// ---------- the camera ----------
+
+// Metres. X runs west (screen right), Y up, Z north (toward the viewer).
+// We stand on the headland behind the lighthouse and look south over the sea.
+const HORIZON = 640;
+const CX = 540;
+const FOCAL = 1500;
+const CAM = [12, 42, 90];
+const PLATEAU = 22;
+const NEAR = 1;
+
+function project(p) {
+  const d = CAM[2] - p[2];
+  return [CX + (FOCAL * (p[0] - CAM[0])) / d, HORIZON - (FOCAL * (p[1] - CAM[1])) / d];
+}
+
+// Keeps the part of a polygon where side(p) >= 0.
+function clipPlane(poly, side) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const da = side(a);
+    const db = side(b);
+    if (da >= 0) out.push(a);
+    if (da >= 0 !== db >= 0) {
+      const u = da / (da - db);
+      out.push([lerp(a[0], b[0], u), lerp(a[1], b[1], u), lerp(a[2], b[2], u)]);
+    }
+  }
+  return out;
+}
+
+const clipNear = (poly) => clipPlane(poly, (p) => CAM[2] - p[2] - NEAR);
+const aboveSea = (p) => p[1];
+
+function area(pts) {
+  let s = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % pts.length];
+    s += a[0] * b[1] - b[0] * a[1];
+  }
+  return s / 2;
+}
+
+// Adds a polygon with clockwise screen winding, so overlapping pieces union under nonzero fill.
+function addPoly(path, pts) {
+  if (pts.length < 3) return path;
+  const p = area(pts) < 0 ? pts.slice().reverse() : pts;
+  path.moveTo(p[0][0], p[0][1]);
+  for (let i = 1; i < p.length; i++) path.lineTo(p[i][0], p[i][1]);
+  path.closePath();
+  return path;
+}
+
+function addWorldPoly(path, poly) {
+  const c = clipNear(poly);
+  if (c.length >= 3) addPoly(path, c.map(project));
+  return path;
+}
+
+function hull(points) {
+  const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (p.length < 3) return p;
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [];
+  for (const q of p) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop();
+    lower.push(q);
+  }
+  const upper = [];
+  for (let i = p.length - 1; i >= 0; i--) {
+    const q = p[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop();
+    upper.push(q);
+  }
+  upper.pop();
+  lower.pop();
+  return lower.concat(upper);
+}
+
+// ---------- the sun ----------
+
+const SUN_R = 46;
+
+function sunAt(theta) {
+  const g = -Math.cos(theta) + 0.3 * Math.sin(2 * theta);
+  const x = 497 + 367 * g;
+  const y = HORIZON - 490 * Math.sin(theta);
+  // Refraction squashes the disc as it meets the sea.
+  const squash = 1 - 0.24 * (1 - smooth(0, 2.4 * SUN_R, HORIZON - y));
+  return { x, y, rx: SUN_R, ry: SUN_R * squash };
+}
+
+// Height of the sun's top limb above the sea, in pixels.
+function sunTop(t) {
+  const s = sunAt(sunAngle(t));
+  return HORIZON - (s.y - s.ry);
+}
+
+function solve(f, a, b) {
+  let fa = f(a);
+  for (let i = 0; i < 60; i++) {
+    const mid = (a + b) / 2;
+    const fm = f(mid);
+    if (fm > 0 === fa > 0) {
+      a = mid;
+      fa = fm;
+    } else {
+      b = mid;
+    }
+  }
+  return (a + b) / 2;
+}
+
+// The lamp lights in the frame the last sliver goes under, and goes out when the first one returns.
+const T_SET = solve(sunTop, 0.3, 3);
+const T_RISE = solve(sunTop, 7.5, 11);
+
+// Direction toward the sun for shadows: azimuth from south toward west, and elevation.
+function sunVector(theta) {
+  const az = -Math.cos(theta);
+  const el = 0.55 * Math.sin(theta);
+  return [Math.cos(el) * Math.sin(az), Math.sin(el), -Math.cos(el) * Math.cos(az)];
+}
+
+// ---------- the lighthouse ----------
+
+const TOWER_BASE_R = 3.3;
+const TOWER_TOP_R = 2.45;
+const TOWER_TOP = 47.5;
+const GALLERY = [47.5, 48.2, 3.7];
+const LANTERN = [48.2, 52.3, 2.15];
+const DOME_TOP = 54.4;
+const LAMP = [0, 50.2, 0];
+
+// The lens turns three times a loop, one flash every 4 s, and faces the sunset point as it lights.
+const LENS_TURNS = 3;
+const BEAM_TILT = -0.025;
+const BEAM_SPREAD = [0.075, 0.12];
+
+function towerRadius(y) {
+  return lerp(TOWER_BASE_R, TOWER_TOP_R, (y - PLATEAU) / (TOWER_TOP - PLATEAU));
+}
+
+const PHI_SET = (() => {
+  const x = sunAt(sunAngle(T_SET)).x;
+  return Math.atan2((x - CX) / FOCAL, -1);
+})();
+
+function lensAngle(t) {
+  return PHI_SET - (TAU * LENS_TURNS * (t - T_SET)) / DURATION;
+}
+
+function beamFrame(phi) {
+  const c = Math.cos(BEAM_TILT);
+  const s = Math.sin(BEAM_TILT);
+  const axis = [Math.sin(phi) * c, s, Math.cos(phi) * c];
+  const side = [Math.cos(phi), 0, -Math.sin(phi)];
+  const up = [-s * Math.sin(phi), c, -s * Math.cos(phi)];
+  return { axis, side, up };
+}
+
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+// How far inside the beam cone a point sits: 0 on the axis, 1 on the edge.
+function beamReach(frame, p, length) {
+  const w = sub(p, LAMP);
+  const a = dot(w, frame.axis);
+  if (a <= 0 || a > length) return Infinity;
+  const ch = dot(w, frame.side) / (a * Math.tan(BEAM_SPREAD[0]));
+  const cv = dot(w, frame.up) / (a * Math.tan(BEAM_SPREAD[1]));
+  return Math.hypot(ch, cv);
+}
+
+function coneRays(frame, length, n, spread = 1) {
+  const rays = [];
+  const th = Math.tan(BEAM_SPREAD[0]) * spread;
+  const tv = Math.tan(BEAM_SPREAD[1]) * spread;
+  for (let k = 0; k < n; k++) {
+    const a = (TAU * k) / n;
+    const ch = Math.cos(a) * th;
+    const cv = Math.sin(a) * tv;
+    rays.push([
+      LAMP[0] + length * (frame.axis[0] + ch * frame.side[0] + cv * frame.up[0]),
+      LAMP[1] + length * (frame.axis[1] + ch * frame.side[1] + cv * frame.up[1]),
+      LAMP[2] + length * (frame.axis[2] + ch * frame.side[2] + cv * frame.up[2]),
+    ]);
+  }
+  return rays;
+}
+
+// The silhouette of a cone of light above the water, clipped at the camera, as one path.
+function conePath(frame, length, spread) {
+  const rays = coneRays(frame, length, 36, spread);
+  const path = new Path2D();
+  for (let k = 0; k < rays.length; k++) {
+    addWorldPoly(path, clipPlane([LAMP, rays[k], rays[(k + 1) % rays.length]], aboveSea));
+  }
+  addWorldPoly(path, clipPlane(rays, aboveSea));
+  return path;
+}
+
+// Where the cone meets the water.
+function footprintPath(frame, length) {
+  const rays = coneRays(frame, length, 36);
+  const hits = [];
+  const meet = (a, b) => {
+    if (a[1] > 0 === b[1] > 0) return;
+    const u = a[1] / (a[1] - b[1]);
+    hits.push([lerp(a[0], b[0], u), lerp(a[2], b[2], u)]);
+  };
+  for (let k = 0; k < rays.length; k++) {
+    meet(LAMP, rays[k]);
+    meet(rays[k], rays[(k + 1) % rays.length]);
+  }
+  for (const r of rays) if (r[1] <= 0) hits.push([r[0], r[2]]);
+  const path = new Path2D();
+  if (hits.length < 3) return null;
+  addWorldPoly(path, hull(hits).map((q) => [q[0], 0, q[1]]));
+  return path;
+}
+
+// ---------- canvases ----------
 
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
+const G = {};
+const layerCanvas = {};
+for (const name of INKS) {
+  layerCanvas[name] = document.createElement("canvas");
+  G[name] = layerCanvas[name].getContext("2d");
+}
+const paper = document.createElement("canvas");
+const view = { x: 0, y: 0, w: W, h: H };
+const grain = {};
+
+function noiseTile(seed, size, alphaAt) {
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const g = c.getContext("2d");
+  const img = g.createImageData(size, size);
+  const rand = seeded(seed);
+  for (let i = 0; i < size * size; i++) {
+    img.data[i * 4 + 3] = Math.round(clamp(alphaAt(rand, i % size, (i / size) | 0)) * 255);
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+// Smooth tiling value noise for uneven ink, in 0..1.
+function mottle(seed, size, cells) {
+  const lattice = [];
+  const rand = seeded(seed);
+  for (let i = 0; i < cells * cells; i++) lattice.push(rand());
+  const at = (i, j) => lattice[wrap(j, cells) * cells + wrap(i, cells)];
+  return (x, y) => {
+    const fx = (x / size) * cells;
+    const fy = (y / size) * cells;
+    const i = Math.floor(fx);
+    const j = Math.floor(fy);
+    const u = smooth(0, 1, fx - i);
+    const v = smooth(0, 1, fy - j);
+    return lerp(lerp(at(i, j), at(i + 1, j), u), lerp(at(i, j + 1), at(i + 1, j + 1), u), v);
+  };
+}
+
+function buildTextures() {
+  // One tile per ink: specks where the ink failed, over a slow unevenness across the sheet.
+  INKS.forEach((name, n) => {
+    const blot = mottle(91 + n * 13, 512, 4);
+    const tile = noiseTile(11 + n * 7, 512, (r, x, y) => {
+      const v = r();
+      const speck = v < 0.005 ? 0.6 : v < 0.07 ? 0.16 : 0.02;
+      return 1 - (1 - speck) * (1 - 0.09 * blot(x, y));
+    });
+    grain[name] = G[name].createPattern(tile, "repeat");
+  });
+
+  paper.width = W;
+  paper.height = H;
+  const g = paper.getContext("2d");
+  g.fillStyle = PAPER;
+  g.fillRect(0, 0, W, H);
+  const fibre = noiseTile(7, 512, (r) => (r() < 0.5 ? 0.05 * r() : 0));
+  g.globalAlpha = 0.6;
+  g.fillStyle = g.createPattern(fibre, "repeat");
+  g.fillRect(0, 0, W, H);
+  g.globalAlpha = 1;
+}
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.floor(window.innerWidth * dpr);
-  canvas.height = Math.floor(window.innerHeight * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  canvas.width = Math.round(vw * dpr);
+  canvas.height = Math.round(vh * dpr);
+  const s = Math.min(vw / W, vh / H) * dpr;
+  view.w = Math.round(W * s);
+  view.h = Math.round(H * s);
+  view.x = Math.round((canvas.width - view.w) / 2);
+  view.y = Math.round((canvas.height - view.h) / 2);
+  for (const name of INKS) {
+    layerCanvas[name].width = view.w;
+    layerCanvas[name].height = view.h;
+    G[name].setTransform(view.w / W, 0, 0, view.h / H, 0, 0);
+    G[name].fillStyle = INK_COLOR[name];
+  }
 }
 
+// ---------- ink ----------
+
+// Replace the coverage of each named ink inside the path.
+function setInk(path, cov) {
+  for (const name in cov) {
+    const g = G[name];
+    g.globalCompositeOperation = "destination-out";
+    g.globalAlpha = 1;
+    g.fill(path);
+    if (cov[name] > 0.002) {
+      g.globalCompositeOperation = "source-over";
+      g.globalAlpha = Math.min(1, cov[name]);
+      g.fill(path);
+    }
+  }
+}
+
+// Lay more of one ink on top of what is there.
+function addInk(path, name, a) {
+  if (a <= 0.002) return;
+  const g = G[name];
+  g.globalCompositeOperation = "source-over";
+  g.globalAlpha = Math.min(1, a);
+  g.fill(path);
+}
+
+// Lift a share of every ink, as light in the air does.
+function thinInk(path, a, names = INKS) {
+  if (a <= 0.002) return;
+  for (const name of names) {
+    const g = G[name];
+    g.globalCompositeOperation = "destination-out";
+    g.globalAlpha = Math.min(1, a);
+    g.fill(path);
+  }
+}
+
+function clipped(path, draw) {
+  for (const name of INKS) {
+    G[name].save();
+    G[name].clip(path);
+  }
+  draw();
+  for (const name of INKS) G[name].restore();
+}
+
+function rect(x, y, w, h) {
+  const p = new Path2D();
+  p.rect(x, y, w, h);
+  return p;
+}
+
+function ellipse(x, y, rx, ry) {
+  const p = new Path2D();
+  p.ellipse(x, y, Math.max(0.01, rx), Math.max(0.01, ry), 0, 0, TAU);
+  return p;
+}
+
+// ---------- night ----------
+
+// Below the sky, night is one stepped edge that climbs from the bottom of the frame,
+// over the sea and up the tower, the way the last sunlight left. 0 is day, 1 is night.
+const NIGHT_EDGE = 72;
+const NIGHT_STEPS = [0.2, 0.45, 0.7, 0.95];
+
+function nightAt(y, S) {
+  return clamp((y - S.nightLine) / NIGHT_EDGE);
+}
+
+// Horizontal bands where the stepped night value is constant, from top to bottom.
+function nightBands(top, bottom, S) {
+  const out = [];
+  const step = 2;
+  const level = (v) => {
+    let k = 0;
+    while (k < NIGHT_STEPS.length && v >= NIGHT_STEPS[k]) k++;
+    return k;
+  };
+  let y0 = top;
+  let v0 = nightAt(top, S);
+  let k0 = level(v0);
+  for (let y = top + step; ; y += step) {
+    const yy = Math.min(y, bottom);
+    const v = nightAt(yy, S);
+    const k = level(v);
+    if (k !== k0) {
+      const thr = NIGHT_STEPS[Math.min(k, k0)];
+      const yc = lerp(yy - step, yy, (thr - v0) / (v - v0 || 1));
+      out.push({ y0, y1: yc, n: k0 / NIGHT_STEPS.length });
+      y0 = yc;
+      k0 = k;
+    }
+    v0 = v;
+    if (yy >= bottom) break;
+  }
+  out.push({ y0, y1: bottom, n: k0 / NIGHT_STEPS.length });
+  return out;
+}
+
+function toneAt(day, night, n) {
+  const out = {};
+  for (const name in day) out[name] = lerp(day[name], night[name] ?? 0, n);
+  return out;
+}
+
+function paintBanded(path, top, bottom, day, night, S) {
+  clipped(path, () => {
+    for (const b of nightBands(top, bottom, S)) {
+      setInk(rect(-20, b.y0, W + 40, b.y1 - b.y0 + 0.5), toneAt(day, night, b.n));
+    }
+  });
+}
+
+// ---------- sky ----------
+
+const CELL = 12;
+const COLS = Math.ceil(W / CELL);
+const ROWS = Math.ceil(HORIZON / CELL) + 1;
+const NX = COLS + 1;
+const field = { blue: new Float32Array(NX * (ROWS + 1)), pink: new Float32Array(NX * (ROWS + 1)), yellow: new Float32Array(NX * (ROWS + 1)) };
+
+const SKY_LEVELS = {
+  blue: [0.1, 0.2, 0.34, 0.52, 0.74, 0.92],
+  pink: [0.12, 0.26, 0.42],
+  yellow: [0.14, 0.32, 0.55, 0.8],
+};
+
+function skyAt(x, y, S, out) {
+  const u = clamp((HORIZON - y) / HORIZON);
+  const night = smooth(S.front - 0.38, S.front, u);
+  let b = 0.06 + 0.3 * Math.pow(u, 1.25);
+  b = lerp(b, 1 - 0.14 * (1 - smooth(0, 0.3, u)), night);
+  let p = (0.3 + 0.12 * (1 - smooth(0, 0.3, u))) * night;
+
+  p = Math.max(p, S.warm * 0.42 * (1 - smooth(0, 0.5, u)));
+
+  const rho = Math.hypot(x - S.sun.x, (y - S.sun.y) * 1.1) / SUN_R;
+  const halo = S.sunPower * Math.exp(-Math.max(0, rho - 1) / S.haloSize);
+  b *= 1 - 0.95 * halo;
+  let yl = halo * S.haloYellow;
+  const ring = (rho - S.pinkRing) / S.pinkWidth;
+  p = Math.max(p, S.sunPower * S.warm * 0.36 * Math.exp(-ring * ring));
+  yl = Math.max(yl, S.warm * S.sunPower * 0.32 * (1 - smooth(0, 0.16, u)) * Math.exp(-Math.abs(x - S.sun.x) / 380));
+
+  out[0] = b;
+  out[1] = p;
+  out[2] = yl;
+}
+
+function evalSky(S) {
+  const out = [0, 0, 0];
+  for (let j = 0; j <= ROWS; j++) {
+    for (let i = 0; i <= COLS; i++) {
+      skyAt(i * CELL, j * CELL, S, out);
+      const k = j * NX + i;
+      field.blue[k] = out[0];
+      field.pink[k] = out[1];
+      field.yellow[k] = out[2];
+    }
+  }
+}
+
+function skySample(f, x, y) {
+  const fx = clamp(x / CELL, 0, COLS - 0.001);
+  const fy = clamp(y / CELL, 0, ROWS - 0.001);
+  const i = Math.floor(fx);
+  const j = Math.floor(fy);
+  const u = fx - i;
+  const v = fy - j;
+  const a = f[j * NX + i];
+  const b = f[j * NX + i + 1];
+  const c = f[(j + 1) * NX + i];
+  const d = f[(j + 1) * NX + i + 1];
+  return lerp(lerp(a, b, u), lerp(c, d, u), v);
+}
+
+// Marching squares: the region where the field reaches a level, as one path.
+function isoPath(f, level) {
+  const path = new Path2D();
+  for (let j = 0; j < ROWS; j++) {
+    const y0 = j * CELL;
+    let run = -1;
+    for (let i = 0; i <= COLS; i++) {
+      let full = false;
+      if (i < COLS) {
+        const a = f[j * NX + i];
+        const b = f[j * NX + i + 1];
+        const c = f[(j + 1) * NX + i + 1];
+        const d = f[(j + 1) * NX + i];
+        const code = (a >= level) | ((b >= level) << 1) | ((c >= level) << 2) | ((d >= level) << 3);
+        if (code === 15) full = true;
+        else if (code) cellPiece(path, i * CELL, y0, a, b, c, d, level, code);
+      }
+      if (full && run < 0) run = i;
+      if (!full && run >= 0) {
+        path.rect(run * CELL, y0, (i - run) * CELL, CELL);
+        run = -1;
+      }
+    }
+  }
+  return path;
+}
+
+function cellPiece(path, x, y, a, b, c, d, level, code) {
+  const P = [
+    [x, y, a],
+    [x + CELL, y, b],
+    [x + CELL, y + CELL, c],
+    [x, y + CELL, d],
+  ];
+  const cut = (p, q) => {
+    const u = (level - p[2]) / (q[2] - p[2]);
+    return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u];
+  };
+  if ((code === 5 || code === 10) && (a + b + c + d) / 4 < level) {
+    for (const k of code === 5 ? [0, 2] : [1, 3]) {
+      const p = P[k];
+      addPoly(path, [cut(P[(k + 3) % 4], p), [p[0], p[1]], cut(p, P[(k + 1) % 4])]);
+    }
+    return;
+  }
+  const pts = [];
+  for (let k = 0; k < 4; k++) {
+    const p = P[k];
+    const q = P[(k + 1) % 4];
+    const pin = p[2] >= level;
+    if (pin) pts.push([p[0], p[1]]);
+    if (pin !== q[2] >= level) pts.push(cut(p, q));
+  }
+  addPoly(path, pts);
+}
+
+function drawSky(S) {
+  evalSky(S);
+  // Each level sits inside the one below it, so one more layer of ink lifts it to that level.
+  for (const name of INKS) {
+    let below = 0;
+    for (const level of SKY_LEVELS[name]) {
+      addInk(isoPath(field[name], level), name, (level - below) / (1 - below));
+      below = level;
+    }
+  }
+  drawEarthShadow(S);
+}
+
+// The earth's shadow rises from the horizon away from the sun, with the pink belt of Venus riding on it.
+// Its edge is higher on that side. Height of a point under the edge, in pixels:
+function underShadow(x, y, S) {
+  const across = S.dusk ? x : W - x;
+  return S.shadow.rise - S.shadow.tilt * across - 0.00004 * across * across - (HORIZON - y);
+}
+
+const SHADOW_STEPS = [
+  { from: 0, blue: 0.72, pink: 0.2 },
+  { from: 160, blue: 0.6, pink: 0.1 },
+];
+
+function shadowCover(x, y, S) {
+  if (!S.shadow) return 0;
+  const d = underShadow(x, y, S);
+  let keep = 1;
+  for (const step of SHADOW_STEPS) if (d > step.from) keep *= 1 - step.blue;
+  return 1 - keep;
+}
+
+// The part of the sky from lo to hi pixels under the shadow's edge; hi null runs to the horizon.
+function shadowBand(S, lo, hi) {
+  const top = [];
+  const bottom = [];
+  for (let x = -20; x <= W + 20; x += 20) {
+    const edge = HORIZON - underShadow(x, HORIZON, S);
+    top.push([x, clamp(edge + lo, -40, HORIZON + 4)]);
+    bottom.push([x, hi === null ? HORIZON + 4 : clamp(edge + hi, -40, HORIZON + 4)]);
+  }
+  return addPoly(new Path2D(), top.concat(bottom.reverse()));
+}
+
+function drawEarthShadow(S) {
+  if (!S.shadow) return;
+  if (S.belt > 0.01) addInk(shadowBand(S, -80, 0), "pink", 0.46 * S.belt);
+  for (const step of SHADOW_STEPS) {
+    const band = shadowBand(S, step.from, null);
+    addInk(band, "blue", step.blue);
+    addInk(band, "pink", step.pink);
+  }
+}
+
+// ---------- stars ----------
+
+const STARS = (() => {
+  const rand = seeded(2024);
+  const list = [];
+  for (let i = 0; i < 170; i++) {
+    list.push({
+      x: -260 + rand() * (W + 520),
+      y: -300 + rand() * (HORIZON + 240),
+      mag: Math.pow(rand(), 1.6),
+      phase: rand() * TAU,
+      speed: 1 + Math.floor(rand() * 4),
+    });
+  }
+  return list;
+})();
+
+const STAR_PIVOT = [CX, HORIZON + 2600];
+
+function drawStars(S) {
+  if (S.np <= 0.01) return;
+  const path = new Path2D();
+  const turn = 0.0085 * (S.t - 5.3);
+  const c = Math.cos(turn);
+  const s = Math.sin(turn);
+  for (const star of STARS) {
+    const dx = star.x - STAR_PIVOT[0];
+    const dy = star.y - STAR_PIVOT[1];
+    const x = STAR_PIVOT[0] + dx * c - dy * s;
+    const y = STAR_PIVOT[1] + dx * s + dy * c;
+    if (x < -10 || x > W + 10 || y < -10 || y > HORIZON - 6) continue;
+    const depth = 1 - (1 - skySample(field.blue, x, y)) * (1 - shadowCover(x, y, S));
+    const thr = 0.9 + 0.075 * star.mag;
+    const reach = smooth(thr, thr + 0.02, depth);
+    if (reach <= 0) continue;
+    // Stars arrive on a spring as the ink deepens and leave on an ease as it thins.
+    const pop = S.dusk ? spring(reach * 0.45, 260, 24) : smooth(0, 1, reach);
+    const twinkle = 0.8 + 0.2 * Math.sin(TAU * star.speed * (S.t / DURATION) + star.phase);
+    const r = (0.9 + 2.6 * (1 - star.mag)) * pop * twinkle;
+    if (r < 0.25) continue;
+    path.moveTo(x + r, y);
+    path.ellipse(x, y, r, r, 0, 0, TAU);
+    if (star.mag < 0.06) {
+      const l = r * 3.6;
+      const w = r * 0.42;
+      addPoly(path, [[x - l, y], [x - w, y - w], [x, y - l], [x + w, y - w], [x + l, y], [x + w, y + w], [x, y + l], [x - w, y + w]]);
+    }
+  }
+  setInk(path, { blue: 0, pink: 0, yellow: 0 });
+}
+
+// ---------- sun and gulls ----------
+
+function drawSun(S) {
+  const sun = S.sun;
+  if (sun.y - sun.ry > HORIZON + 2) return;
+  setInk(ellipse(sun.x, sun.y, sun.rx, sun.ry), {
+    blue: 0,
+    pink: 0.04 + 0.52 * S.warm,
+    yellow: 0.74 + 0.26 * S.warm,
+  });
+}
+
+// A waning crescent a few days from new. It rises before dawn where the sun will rise,
+// and whitens away into the day sky because it is only bare paper.
+const MOON_LEAD = 1.2;
+const MOON_R = 24;
+
+function drawMoon(S) {
+  const m = sunAt(S.theta + MOON_LEAD);
+  if (m.y - MOON_R > HORIZON) return;
+  const a = Math.atan2(S.sun.y - m.y, S.sun.x - m.x);
+  const d = 1.05 * MOON_R;
+  const g = Math.acos(d / (2 * MOON_R));
+  const path = new Path2D();
+  path.arc(m.x, m.y, MOON_R, a - Math.PI + g, a + Math.PI - g);
+  path.arc(m.x - d * Math.cos(a), m.y - d * Math.sin(a), MOON_R, a + g, a - g, true);
+  path.closePath();
+  setInk(path, { blue: 0, pink: 0, yellow: 0 });
+}
+
+const GULLS = [
+  { start: 9.9, span: 3.4, y: 300, size: 24, flap: 7, lift: 22 },
+  { start: 10.2, span: 3.0, y: 360, size: 17, flap: 9, lift: 15 },
+];
+
+function drawGulls(S) {
+  const path = new Path2D();
+  for (const gull of GULLS) {
+    const u = wrap(S.t - gull.start, DURATION) / gull.span;
+    if (u >= 1) continue;
+    const x = lerp(W + 60, -60, u);
+    const y = gull.y + gull.lift * Math.sin(u * Math.PI * 1.3);
+    const beat = Math.sin(TAU * gull.flap * u);
+    const s = gull.size;
+    const tip = -0.55 * s * beat;
+    const elbow = 0.25 * s * beat;
+    const wing = (dir) => {
+      path.moveTo(x, y);
+      path.quadraticCurveTo(x + dir * 0.5 * s, y - 0.55 * s + elbow, x + dir * 1.05 * s, y - 0.1 * s + elbow);
+      path.quadraticCurveTo(x + dir * 1.6 * s, y + tip * 0.4, x + dir * 2.2 * s, y + 0.15 * s + tip);
+      path.quadraticCurveTo(x + dir * 1.55 * s, y + 0.18 * s + tip * 0.5, x + dir * 1.05 * s, y + 0.18 * s + elbow);
+      path.quadraticCurveTo(x + dir * 0.5 * s, y - 0.2 * s + elbow, x, y + 0.32 * s);
+      path.closePath();
+    };
+    wing(1);
+    wing(-1);
+  }
+  setInk(path, { blue: 0.92, pink: 0.55, yellow: 0 });
+}
+
+// ---------- sea ----------
+
+const SEA_DAY = { blue: 0.74, pink: 0.03, yellow: 0 };
+const SEA_NIGHT = { blue: 1, pink: 0.42, yellow: 0 };
+
+const WAVE_ROWS = (() => {
+  const rand = seeded(77);
+  const rows = [];
+  for (let z = -40; z > -2400; z -= 7 + (-z) * 0.035) {
+    const dashes = [];
+    for (let x = -700; x < 760; ) {
+      const len = 4 + rand() * 18;
+      dashes.push({ x, len, phase: rand() * TAU, drift: rand() * 2 - 1 });
+      x += len + 3 + rand() * 22;
+    }
+    rows.push({ z, dashes, phase: rand() * TAU });
+  }
+  return rows;
+})();
+
+function waveDashes(S, filter) {
+  const path = new Path2D();
+  for (const row of WAVE_ROWS) {
+    const zt = row.z + 1.2 * Math.sin(TAU * (S.t / DURATION) * 2 + row.phase);
+    const d = CAM[2] - zt;
+    const k = FOCAL / d;
+    const y = HORIZON + k * CAM[1];
+    if (y > H + 4) continue;
+    const thick = Math.max(0.6, k * 0.5);
+    for (const dash of row.dashes) {
+      const pulse = Math.sin(TAU * (S.t / DURATION) * 3 + dash.phase);
+      if (pulse < -0.35) continue;
+      const len = dash.len * (0.55 + 0.45 * pulse);
+      const xw = dash.x + 2.5 * dash.drift * Math.sin(TAU * (S.t / DURATION) + dash.phase);
+      const x0 = CX + k * (xw - CAM[0]);
+      const x1 = CX + k * (xw + len - CAM[0]);
+      if (x1 < -4 || x0 > W + 4) continue;
+      if (filter && !filter(x0, x1, y)) continue;
+      path.rect(x0, y - thick / 2, x1 - x0, thick);
+    }
+  }
+  return path;
+}
+
+function drawSea(S) {
+  const sea = rect(-20, HORIZON, W + 40, H - HORIZON + 20);
+  paintBanded(sea, HORIZON, H, SEA_DAY, SEA_NIGHT, S);
+  // warm water under a low sun
+  if (S.warm > 0.01) {
+    const near = rect(-20, HORIZON, W + 40, 60);
+    clipped(near, () => {
+      addInk(rect(-20, HORIZON, W + 40, 22), "pink", 0.3 * S.warm);
+      addInk(rect(-20, HORIZON, W + 40, 9), "yellow", 0.3 * S.warm * S.sunPower);
+    });
+  }
+
+  const waves = waveDashes(S);
+  addInk(waves, "blue", 0.3);
+  addInk(waves, "pink", 0.12 + 0.2 * S.np);
+
+  // The sun's road on the water.
+  const sun = S.sun;
+  const lift = HORIZON - sun.y;
+  if (lift > -SUN_R * 1.2 && S.sunPower > 0.02) {
+    const reach = 40 + Math.max(0, lift) * 1.35;
+    const half = SUN_R * (0.9 + 0.5 * S.warm);
+    const glints = waveDashes(S, (x0, x1, y) => {
+      const below = y - HORIZON;
+      if (below > reach) return false;
+      const width = half * (1 + below / 260);
+      const mid = (x0 + x1) / 2;
+      return Math.abs(mid - sun.x) < width * (1 - 0.7 * (below / reach));
+    });
+    thinInk(glints, 0.9 * S.sunPower, ["blue", "pink"]);
+    addInk(glints, "yellow", (0.55 + 0.35 * S.warm) * S.sunPower);
+    addInk(glints, "pink", 0.35 * S.warm * S.sunPower);
+  }
+
+  // A thin road of moonlight once the moon is up.
+  const moon = sunAt(S.theta + MOON_LEAD);
+  const moonUp = HORIZON - moon.y;
+  if (moonUp > -MOON_R && S.np > 0.3) {
+    const reach = 30 + Math.max(0, moonUp) * 0.9;
+    const glints = waveDashes(S, (x0, x1, y) => {
+      const below = y - HORIZON;
+      return below < reach && Math.abs((x0 + x1) / 2 - moon.x) < MOON_R * 0.8 * (1 + below / 300);
+    });
+    thinInk(glints, 0.8 * smooth(0.3, 0.6, S.np), ["blue", "pink"]);
+  }
+
+  // The beam lights a strip of crests where it meets the water.
+  if (S.lamp > 0.01) {
+    const foot = footprintPath(S.beam, BEAM_LENGTH);
+    if (foot) {
+      clipped(foot, () => {
+        const lit = waveDashes(S);
+        thinInk(lit, 0.92 * S.lamp, ["blue", "pink"]);
+        addInk(lit, "yellow", 0.5 * S.lamp);
+      });
+    }
+  }
+}
+
+// ---------- the boat ----------
+
+const BOAT = { start: 2.0, span: 7.2, from: -175, to: 200, z: -360 };
+
+function drawBoat(S) {
+  const u = (S.t - BOAT.start) / BOAT.span;
+  if (u <= 0 || u >= 1) return;
+  const X = lerp(BOAT.from, BOAT.to, u);
+  const k = FOCAL / (CAM[2] - BOAT.z);
+  const bob = 0.25 * Math.sin(TAU * (S.t / DURATION) * 5);
+  const [x, y] = project([X, bob, BOAT.z]);
+  const m = k;
+  const hull = new Path2D();
+  addPoly(hull, [[x - 5.2 * m, y - 1.3 * m], [x + 5.6 * m, y - 1.3 * m], [x + 3.8 * m, y], [x - 4.2 * m, y]]);
+  const sail = new Path2D();
+  addPoly(sail, [[x - 0.2 * m, y - 1.6 * m], [x - 0.2 * m, y - 11.5 * m], [x - 4.6 * m, y - 1.7 * m]]);
+  addPoly(sail, [[x + 0.3 * m, y - 1.6 * m], [x + 0.3 * m, y - 10.8 * m], [x + 4.4 * m, y - 1.7 * m]]);
+  const mast = rect(x - 0.18 * m, y - 12.2 * m, 0.36 * m, 10.9 * m);
+
+  const lit = S.lamp * smooth(1.25, 0.8, beamReach(S.beam, [X, 6, BOAT.z], BEAM_LENGTH));
+  const dark = toneAt({ blue: 0.82, pink: 0.35 }, { blue: 1, pink: 0.78 }, S.np);
+  setInk(hull, dark);
+  setInk(mast, dark);
+  setInk(sail, toneAt(toneAt({ blue: 0.25, pink: 0.06 }, { blue: 0.96, pink: 0.62 }, S.np), { blue: 0, pink: 0 }, lit));
+  if (lit > 0.01) addInk(sail, "yellow", 0.35 * lit);
+  if (S.np > 0.2) {
+    setInk(ellipse(x, y - 12.4 * m, 1.7, 1.7), { blue: 0, pink: 0, yellow: 0.6 });
+  }
+}
+
+// ---------- land ----------
+
+// The headland's top, seen from behind the lighthouse, in plateau coordinates (x, z).
+const LAND = [
+  [-7, -30], [3, -31], [11, -26], [16, -16], [18, -5], [22, 7], [30, 17], [44, 25], [62, 31],
+  [90, 40], [160, 70], [160, 400], [-160, 400], [-160, 80], [-70, 40], [-36, 20],
+  [-24, 8], [-16, -4], [-14, -16], [-12, -25],
+];
+
+const LAND_PATH = addWorldPoly(new Path2D(), LAND.map(([x, z]) => [x, PLATEAU, z]));
+const LAND_TOP = Math.min(...LAND.map(([x, z]) => project([x, PLATEAU, z])[1]));
+
+const LAND_DAY = { blue: 0.74, pink: 0.34, yellow: 0 };
+const LAND_NIGHT = { blue: 1, pink: 0.92, yellow: 0 };
+
+const TUFTS = (() => {
+  const rand = seeded(5);
+  const path = new Path2D();
+  for (let i = 0; i < 900; i++) {
+    const x = -60 + rand() * 140;
+    const z = -32 + Math.pow(rand(), 0.7) * 120;
+    const [sx, sy] = project([x, PLATEAU, z]);
+    if (sy > H + 20 || sx < -40 || sx > W + 40) continue;
+    const k = FOCAL / (CAM[2] - z);
+    const w = k * (0.35 + rand() * 0.5);
+    const h = k * (0.12 + rand() * 0.18);
+    path.moveTo(sx - w, sy);
+    path.quadraticCurveTo(sx, sy - h * 2.2, sx + w, sy);
+    path.quadraticCurveTo(sx, sy - h * 0.8, sx - w, sy);
+    path.closePath();
+  }
+  return path;
+})();
+
+const FOOTPATH = (() => {
+  const line = [[16, 92], [13, 62], [9, 40], [6, 22], [2.5, 9], [0.6, TOWER_BASE_R]];
+  const left = [];
+  const right = [];
+  for (let i = 0; i < line.length; i++) {
+    const [x, z] = line[i];
+    const w = lerp(1.1, 0.7, i / (line.length - 1));
+    left.push([x - w, PLATEAU, z]);
+    right.push([x + w, PLATEAU, z]);
+  }
+  return addWorldPoly(new Path2D(), left.concat(right.reverse()));
+})();
+
+function towerShadowPath(sunV) {
+  const path = new Path2D();
+  const cast = (p) => {
+    const k = (p[1] - PLATEAU) / Math.max(0.025, sunV[1]);
+    return [p[0] - sunV[0] * k, p[2] - sunV[2] * k];
+  };
+  const ring = (y, r) => {
+    const pts = [];
+    for (let i = 0; i < 16; i++) {
+      const a = (TAU * i) / 16;
+      pts.push([r * Math.cos(a), y, r * Math.sin(a)]);
+    }
+    return pts;
+  };
+  const piece = (y0, r0, y1, r1) => {
+    const pts = ring(y0, r0).concat(ring(y1, r1)).map(cast);
+    addWorldPoly(path, hull(pts).map(([x, z]) => [x, PLATEAU, z]));
+  };
+  piece(PLATEAU, TOWER_BASE_R, TOWER_TOP, TOWER_TOP_R);
+  piece(GALLERY[0], GALLERY[2], GALLERY[1], GALLERY[2]);
+  piece(LANTERN[0], LANTERN[2], LANTERN[1], LANTERN[2]);
+  piece(LANTERN[1], LANTERN[2] + 0.2, DOME_TOP, 0.3);
+  return path;
+}
+
+function drawLand(S) {
+  paintBanded(LAND_PATH, LAND_TOP - 2, H, LAND_DAY, LAND_NIGHT, S);
+  clipped(LAND_PATH, () => {
+    if (S.litY > LAND_TOP && S.sunUp) {
+      // Grass is only green where the sun reaches it: blue ink under yellow light.
+      const lit = rect(-20, -20, W + 40, S.litY + 20);
+      clipped(lit, () => {
+        const warm = S.warm;
+        setInk(LAND_PATH, { blue: 0.5, pink: 0.1 + 0.32 * warm, yellow: 0.55 });
+        setInk(towerShadowPath(S.sunV), LAND_DAY);
+      });
+    }
+    addInk(TUFTS, "blue", 0.22);
+    addInk(TUFTS, "pink", 0.14);
+    thinInk(FOOTPATH, 0.38 * (1 - S.np));
+  });
+}
+
+// ---------- the tower ----------
+
+const TOWER = (() => {
+  const body = new Path2D();
+  const pts = [];
+  for (let i = 0; i <= 10; i++) {
+    const y = lerp(PLATEAU, TOWER_TOP, i / 10);
+    pts.push(project([towerRadius(y), y, 0]));
+  }
+  for (let i = 10; i >= 0; i--) {
+    const y = lerp(PLATEAU, TOWER_TOP, i / 10);
+    pts.push(project([-towerRadius(y), y, 0]));
+  }
+  for (let i = 1; i < 12; i++) {
+    const a = Math.PI - (Math.PI * i) / 12;
+    pts.push(project([TOWER_BASE_R * Math.cos(a), PLATEAU, TOWER_BASE_R * Math.sin(a)]));
+  }
+  addPoly(body, pts);
+
+  const band = new Path2D();
+  const bandPts = [];
+  for (const y of [35, 40]) bandPts.push(project([towerRadius(y), y, 0]), project([-towerRadius(y), y, 0]));
+  addPoly(band, [bandPts[0], bandPts[2], bandPts[3], bandPts[1]]);
+
+  const openings = new Path2D();
+  const door = [project([-0.75, PLATEAU, TOWER_BASE_R]), project([0.75, PLATEAU + 2.4, TOWER_BASE_R])];
+  openings.rect(door[0][0], door[1][1], door[1][0] - door[0][0], door[0][1] - door[1][1]);
+  for (const y of [29.5, 43]) {
+    const a = project([-0.32, y, towerRadius(y)]);
+    const b = project([0.32, y + 1.3, towerRadius(y)]);
+    openings.rect(a[0], b[1], b[0] - a[0], a[1] - b[1]);
+  }
+
+  const iron = new Path2D();
+  const g0 = project([-GALLERY[2], GALLERY[0], 0]);
+  const g1 = project([GALLERY[2], GALLERY[1], 0]);
+  iron.rect(g0[0], g1[1], g1[0] - g0[0], g0[1] - g1[1]);
+  const railTop = GALLERY[1] + 1.25;
+  const r0 = project([-GALLERY[2] + 0.1, railTop, 0]);
+  const r1 = project([GALLERY[2] - 0.1, railTop - 0.18, 0]);
+  iron.rect(r0[0], r0[1], r1[0] - r0[0], r1[1] - r0[1]);
+  for (let i = 0; i <= 8; i++) {
+    const x = lerp(-GALLERY[2] + 0.15, GALLERY[2] - 0.15, i / 8);
+    const a = project([x - 0.06, railTop, 0]);
+    const b = project([x + 0.06, GALLERY[1], 0]);
+    iron.rect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+  }
+  const lb = project([-LANTERN[2], LANTERN[0], 0]);
+  const lt = project([LANTERN[2], LANTERN[1], 0]);
+  const frame = 0.16;
+  const fw = (lt[0] - lb[0]) * (frame / (2 * LANTERN[2]));
+  iron.rect(lb[0], lt[1], lt[0] - lb[0], fw * 1.2);
+  iron.rect(lb[0], lb[1] - fw * 2.2, lt[0] - lb[0], fw * 2.2);
+  for (const u of [0, 0.5, 1]) {
+    const x = lerp(lb[0], lt[0], u);
+    iron.rect(x - fw * (u === 0.5 ? 0.4 : 0.7), lt[1], fw * (u === 0.5 ? 0.8 : 0.7) * (u === 0.5 ? 1 : 1), lb[1] - lt[1]);
+  }
+  const domeBase = project([0, LANTERN[1], 0]);
+  const domeR = (lt[0] - lb[0]) / 2 + fw;
+  const domeTop = project([0, DOME_TOP, 0])[1];
+  iron.moveTo(domeBase[0] - domeR, domeBase[1]);
+  iron.bezierCurveTo(domeBase[0] - domeR, domeTop + 6, domeBase[0] - domeR * 0.35, domeTop, domeBase[0], domeTop);
+  iron.bezierCurveTo(domeBase[0] + domeR * 0.35, domeTop, domeBase[0] + domeR, domeTop + 6, domeBase[0] + domeR, domeBase[1]);
+  iron.closePath();
+  const ball = project([0, DOME_TOP + 0.45, 0]);
+  const ballR = (FOCAL / CAM[2]) * 0.45;
+  iron.moveTo(ball[0] + ballR, ball[1]);
+  iron.ellipse(ball[0], ball[1], ballR, ballR, 0, 0, TAU);
+  const spike = project([0, DOME_TOP + 2, 0]);
+  iron.rect(spike[0] - 0.8, spike[1], 1.6, ball[1] - spike[1]);
+
+  const glass = new Path2D();
+  glass.rect(lb[0], lt[1], lt[0] - lb[0], lb[1] - lt[1]);
+
+  return {
+    body,
+    band,
+    openings,
+    iron,
+    glass,
+    lens: project(LAMP),
+    glassBox: [lb[0], lt[1], lt[0] - lb[0], lb[1] - lt[1]],
+    top: domeTop,
+    bottom: project([0, PLATEAU, TOWER_BASE_R])[1],
+    left: project([-TOWER_BASE_R, PLATEAU, 0])[0],
+    right: project([TOWER_BASE_R, PLATEAU, 0])[0],
+  };
+})();
+
+function drawTower(S) {
+  const top = TOWER.top - 8;
+  const bottom = TOWER.bottom + 6;
+  paintBanded(TOWER.body, top, bottom, { blue: 0.3, pink: 0.06, yellow: 0 }, { blue: 1, pink: 0.78, yellow: 0 }, S);
+  paintBanded(TOWER.band, top, bottom, { blue: 0.3, pink: 0.92, yellow: 0 }, { blue: 1, pink: 0.95, yellow: 0 }, S);
+
+  // Rim light on the side facing the sun, above the line where the light has drained away.
+  const az = Math.asin(clamp(S.sunV[0] / Math.hypot(S.sunV[0], S.sunV[2]), -1, 1));
+  const share = 1 - Math.cos(az);
+  const sunlit = S.sunUp && S.litY > TOWER.top && share > 0.01;
+  if (sunlit) {
+    const rim = new Path2D();
+    const pts = [];
+    for (let i = 0; i <= 10; i++) {
+      const y = lerp(PLATEAU, TOWER_TOP, i / 10);
+      const r = towerRadius(y);
+      pts.push(project([Math.sign(az) * r, y, 0]));
+      pts.unshift(project([Math.sign(az) * r * (1 - share), y, 0]));
+    }
+    addPoly(rim, pts);
+    clipped(rect(-20, -20, W + 40, S.litY + 20), () => {
+      thinInk(rim, 0.82, ["blue"]);
+      addInk(rim, "yellow", 0.28 + 0.4 * S.warm);
+      addInk(rim, "pink", 0.12 * S.warm);
+    });
+  }
+
+  paintBanded(TOWER.openings, top, bottom, { blue: 0.88, pink: 0.5, yellow: 0 }, { blue: 1, pink: 0.9, yellow: 0 }, S);
+  setInk(TOWER.glass, { blue: 0.9, pink: 0.45, yellow: 0 });
+
+  // The lamp: lights on a spring, goes out on an ease.
+  if (S.lamp > 0.001) {
+    const [, , gw, gh] = TOWER.glassBox;
+    clipped(TOWER.glass, () => {
+      const r = Math.hypot(gw, gh) * 0.62 * S.lamp;
+      setInk(ellipse(TOWER.lens[0], TOWER.lens[1], r, r), { blue: 0, pink: 0.08, yellow: 1 });
+      const hot = (3 + 15 * S.facing) * S.lamp;
+      setInk(ellipse(TOWER.lens[0], TOWER.lens[1], hot * 0.8, hot), { blue: 0, pink: 0, yellow: 0.25 });
+    });
+  }
+  paintBanded(TOWER.iron, top, bottom, { blue: 0.9, pink: 0.5, yellow: 0 }, { blue: 1, pink: 0.92, yellow: 0 }, S);
+
+  // The lantern and the dome are the last things the sun touches.
+  if (sunlit) {
+    const reach = GALLERY[2] * (FOCAL / CAM[2]);
+    const edge = TOWER.lens[0] + Math.sign(az) * reach * (1 - 2 * share);
+    const side = Math.sign(az) > 0 ? rect(edge, -20, W, S.litY + 20) : rect(-20, -20, edge + 20, S.litY + 20);
+    clipped(side, () => {
+      thinInk(TOWER.iron, 0.75, ["blue"]);
+      addInk(TOWER.iron, "yellow", 0.4 + 0.4 * S.warm);
+      addInk(TOWER.iron, "pink", 0.2 * S.warm);
+    });
+  }
+}
+
+// ---------- the beam ----------
+
+const BEAM_LENGTH = 20000;
+
+// Wide and faint outside, narrow and bright at the core.
+const BEAM_STEPS = [
+  { spread: 1, thin: 0.4, yellow: 0.04 },
+  { spread: 0.62, thin: 0.45, yellow: 0.14 },
+  { spread: 0.3, thin: 0.7, yellow: 0.32 },
+];
+
+// Haze scatters light mostly forward: the beam is brightest coming at us, faint going away.
+function scatter(facing) {
+  return facing >= 0 ? 0.8 + 0.2 * facing : 0.8 + 0.7 * facing;
+}
+
+function drawBeam(S) {
+  if (S.lamp <= 0.001) return;
+  const k = S.lamp * scatter(S.toward);
+  for (const step of BEAM_STEPS) {
+    const cone = conePath(S.beam, BEAM_LENGTH, step.spread);
+    thinInk(cone, clamp(step.thin * k));
+    addInk(cone, "yellow", step.yellow * k);
+  }
+}
+
+// ---------- one frame ----------
+
+function state(t) {
+  const theta = sunAngle(t);
+  const e = Math.sin(theta);
+  const sun = sunAt(theta);
+  const sunV = sunVector(theta);
+  const top = HORIZON - (sun.y - sun.ry);
+
+  const np = 1 - smooth(-0.8, -0.02, e);
+  const warm = (1 - smooth(0.06, 0.55, e)) * smooth(-0.45, -0.02, e);
+  const sunPower = smooth(-0.36, 0.02, e);
+  const dusk = wrap(theta, TAU) < 1.5 * Math.PI;
+
+  let shadow = null;
+  if (e < 0) {
+    shadow = { rise: 1600 * Math.pow(smooth(-0.01, -0.62, e), 1.6), tilt: 0.08 };
+  }
+  const belt = smooth(0, -0.08, e) * (1 - smooth(-0.3, -0.62, e));
+
+  // The last light drains from the bottom of the frame, climbs the tower, and reaches the lamp
+  // in the frame the sun's top limb goes under.
+  const litY = lerp(TOWER.lens[1], H + 40, smooth(0, 110, top));
+
+  let lamp = 0;
+  const tw = wrap(t, DURATION);
+  if (tw >= T_SET && tw < T_RISE) lamp = spring(tw - T_SET, 260, 24);
+  if (tw >= T_RISE && tw < T_RISE + 0.18) lamp = 1 - easeIn((tw - T_RISE) / 0.18);
+
+  const phi = lensAngle(tw);
+  const beam = beamFrame(phi);
+  const toCam = sub(CAM, LAMP);
+  const toward = dot(beam.axis, toCam) / Math.hypot(...toCam);
+
+  return {
+    t: tw,
+    theta,
+    e,
+    sun,
+    sunV,
+    np,
+    warm,
+    sunPower,
+    dusk,
+    shadow,
+    belt,
+    front: 1.4 - 1.9 * np,
+    // At dusk the tower keeps its white while the sky goes; at dawn it waits for the sky to pale.
+    nightLine: lerp(H + NIGHT_EDGE + 10, TOWER.top - NIGHT_EDGE - 10, smooth(0.04, dusk ? 0.9 : 0.6, np)),
+    haloSize: 1.3 + 2.3 * warm,
+    haloYellow: 0.95 * (0.5 + 0.5 * warm),
+    pinkRing: 2.7 + 1.5 * warm,
+    pinkWidth: 1.2 + 1.0 * warm,
+    litY,
+    sunUp: top > 0,
+    lamp,
+    beam,
+    toward,
+    facing: smooth(0.55, 1, toward),
+    beamFront: toward > 0,
+  };
+}
+
+function frame(t) {
+  const S = state(t);
+  for (const name of INKS) {
+    const g = G[name];
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = "source-over";
+    g.clearRect(0, 0, view.w, view.h);
+    g.restore();
+  }
+
+  drawSky(S);
+  drawStars(S);
+  drawMoon(S);
+  drawSun(S);
+  drawGulls(S);
+  drawSea(S);
+  drawBoat(S);
+  if (!S.beamFront) drawBeam(S);
+  drawLand(S);
+  drawTower(S);
+  if (S.beamFront) drawBeam(S);
+
+  // Riso grain lifts a little ink everywhere.
+  for (const name of INKS) {
+    const g = G[name];
+    g.globalCompositeOperation = "destination-out";
+    g.globalAlpha = 1;
+    g.fillStyle = grain[name];
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = INK_COLOR[name];
+    g.globalCompositeOperation = "source-over";
+  }
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = LETTERBOX;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(view.x, view.y, view.w, view.h);
+  ctx.clip();
+  ctx.drawImage(paper, view.x, view.y, view.w, view.h);
+  ctx.globalCompositeOperation = "multiply";
+  const k = view.w / W;
+  for (const name of INKS) {
+    const [dx, dy] = REGISTER[name];
+    ctx.drawImage(layerCanvas[name], view.x + dx * k, view.y + dy * k);
+  }
+  ctx.restore();
+}
+
+buildTextures();
 window.addEventListener("resize", resize);
 resize();
 
-// Replace frame(). Every mark is a function of t, in seconds, from 0 up to DURATION.
-// The picture at 0 and the picture at DURATION are the same picture.
-function frame(t) {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, w, h);
-
-  const angle = (t / DURATION) * Math.PI * 2;
-  const reach = Math.min(w, h) * 0.18;
-  const x = w / 2 + Math.cos(angle) * reach;
-  const y = h / 2 + Math.sin(angle) * reach;
-
-  ctx.fillStyle = INK;
-  ctx.beginPath();
-  ctx.arc(x, y, 7, 0, Math.PI * 2);
-  ctx.fill();
-}
-
 // The render path calls seek(t) directly. The same t always draws the same pixels.
 window.seek = function (t) {
-  frame(((t % DURATION) + DURATION) % DURATION);
+  frame(wrap(t, DURATION));
 };
 
 // Live preview only. Under Playwright navigator.webdriver is set, and nothing ticks.
