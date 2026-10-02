@@ -75,18 +75,21 @@ const duration = await page.evaluate(() => DURATION);
 const total = Math.round(duration * FPS) + 1;
 console.log(`rendering ${total} frames, ${W}x${H} at ${FPS} fps, ${SUB} subframes -> ${OUT}`);
 
-function frameBytes(i) {
-  return new Promise(async (resolve) => {
+// Wait for both the posted pixels and the page's own call to return, so the
+// browser is never closed under a call that is still running.
+async function frameBytes(i) {
+  const got = new Promise((resolve) => {
     pending = resolve;
-    await page.evaluate(async (t) => {
-      window.seek(t);
-      const c = document.getElementById("stage");
-      const gl = c.getContext("webgl2");
-      const px = new Uint8Array(c.width * c.height * 4);
-      gl.readPixels(0, 0, c.width, c.height, gl.RGBA, gl.UNSIGNED_BYTE, px);
-      await fetch("/frame", { method: "POST", body: px });
-    }, i / FPS);
   });
+  await page.evaluate(async (t) => {
+    window.seek(t);
+    const c = document.getElementById("stage");
+    const gl = c.getContext("webgl2");
+    const px = new Uint8Array(c.width * c.height * 4);
+    gl.readPixels(0, 0, c.width, c.height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    await fetch("/frame", { method: "POST", body: px });
+  }, i / FPS);
+  return got;
 }
 
 const segs = Math.ceil(total / SEG);
