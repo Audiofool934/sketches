@@ -51,7 +51,8 @@ python gemini_voice.py        # narration, needs GEMINI_API_KEY and audio/ref/
 python render.py -q k         # render, stitch, mix; writes flow_matching.mp4
 ```
 
-`data/`, `audio/`, `build/` and the MP4 are local only.
+The film is on this branch in Git LFS (`git lfs pull` if a clone only has the pointer): `flow_matching.mp4`, H.264, 3840 × 2160, about 280 MB.
+`data/`, `audio/`, and `build/` stay local.
 `audio/` holds the voice reference recording and is kept out of git on purpose.
 
 ## Notes
