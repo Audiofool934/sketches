@@ -10,7 +10,7 @@ The film shows the effect first, then the geometry behind it, then a ruler that 
 Focal lengths add up like ratios, not like millimeters.
 
 The picture and the sound are both made from code.
-The finished film is [`four-millimeters.mp4`](four-millimeters.mp4) in this folder (1920 × 1080, 60 fps, stereo AAC).
+The finished film is [`four-millimeters.mp4`](four-millimeters.mp4) in this folder (1920 × 1080, 60 fps, stereo AAC), with a native 4K version in [`four-millimeters-4k.mp4`](four-millimeters-4k.mp4) (3840 × 2160, 60 fps, 44 MB).
 
 ## What it shows
 
@@ -56,6 +56,7 @@ The tools drive Chromium through `playwright-core`; set `CHROME_PATH` if Playwri
 npm install
 node tools/sound.mjs      # soundtrack -> out/soundtrack.wav, prints loudness and true peak
 node tools/render.mjs     # picture and sound -> out/four-millimeters.mp4
+node tools/render.mjs --res 2 --preset medium --out out/four-millimeters-4k.mp4   # native 3840 x 2160
 ```
 
 Rendering takes about seven minutes on four cores; the soundtrack takes a few seconds.

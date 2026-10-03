@@ -87,18 +87,22 @@
   const film = FM.film;
   const canvas = document.getElementById("stage");
   const ctx = canvas.getContext("2d");
-  const scratch = document.createElement("canvas");
-  scratch.width = film.W;
-  scratch.height = film.H;
-
   const params = new URLSearchParams(location.search);
+  // ?res=2 draws natively at 3840 x 2160.
+  const res = Math.max(1, Number(params.get("res") || 1));
+  canvas.width = film.W * res;
+  canvas.height = film.H * res;
+  const scratch = document.createElement("canvas");
+  scratch.width = film.W * res;
+  scratch.height = film.H * res;
+
   const rendering = navigator.webdriver || params.has("render");
   let blur = rendering && params.get("blur") !== "0";
 
   // Draw film time t. With motion blur, subframes of the same instant are averaged.
   function seek(t) {
-    if (blur) film.drawBlurred(ctx, scratch, t, 4);
-    else film.draw(ctx, t);
+    if (blur) film.drawBlurred(ctx, scratch, t, 4, res);
+    else film.draw(ctx, t, res);
   }
 
   const ready = FM.fontsReady.then(() => document.fonts.ready);

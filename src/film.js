@@ -1095,9 +1095,11 @@
 
   // ------------------------------------------------------------------ the frame
 
-  function draw(ctx, t) {
+  // res: device pixels per design pixel (2 renders 3840 x 2160 from the same drawing).
+  function draw(ctx, t, res = 1) {
     t = clamp(t, 0, DURATION);
     ctx.save();
+    ctx.setTransform(res, 0, 0, res, 0, 0);
     ctx.fillStyle = C.ground;
     ctx.fillRect(0, 0, W, H);
     if (t < T.strip + 0.8) actA(ctx, t);
@@ -1109,13 +1111,12 @@
   }
 
   // One output frame with motion blur: subframes inside a 180 degree shutter, averaged.
-  function drawBlurred(ctx, scratch, t, n = 4) {
+  function drawBlurred(ctx, scratch, t, n = 4, res = 1) {
     const sctx = scratch.getContext("2d");
     const shutter = 0.5 / FPS;
     for (let i = 0; i < n; i++) {
       const ts = t + ((i + 0.5) / n - 0.5) * shutter;
-      sctx.setTransform(1, 0, 0, 1, 0, 0);
-      draw(sctx, ts);
+      draw(sctx, ts, res);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1 / (i + 1);

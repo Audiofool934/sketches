@@ -5,6 +5,7 @@
 //   node tools/render.mjs                        full film -> out/four-millimeters.mp4
 //   node tools/render.mjs --from 0 --to 600      a frame range (end exclusive), for tests
 //   node tools/render.mjs --scale 0.5 --crf 24   a quick half-size preview
+//   node tools/render.mjs --res 2 --out out/four-millimeters-4k.mp4   native 3840 x 2160
 //   options: --audio out/soundtrack.wav  --out <file>  --workers 4  --fps 60  --no-blur  --silent
 
 import { spawn } from "node:child_process";
@@ -21,6 +22,7 @@ const crf = option(args, "crf", "16");
 const preset = option(args, "preset", "slow");
 const scale = Number(option(args, "scale", 1));
 const blur = !args.includes("--no-blur");
+const res = Number(option(args, "res", 1));
 mkdirSync(dirname(out), { recursive: true });
 
 const browser = await launch();
@@ -32,7 +34,7 @@ for (let i = 0; i < workers; i++) {
     console.error("page error:", error.message);
     process.exitCode = 1;
   });
-  await page.goto(pathToFileURL(resolve(ROOT, "index.html")).href + `?render${blur ? "" : "&blur=0"}`);
+  await page.goto(pathToFileURL(resolve(ROOT, "index.html")).href + `?render&res=${res}${blur ? "" : "&blur=0"}`);
   await page.evaluate(() => window.film.ready);
   pages.push(page);
 }
@@ -46,14 +48,14 @@ const hasAudio = existsSync(audioPath) && !args.includes("--silent");
 if (!hasAudio) console.log("no soundtrack: rendering silent (run node tools/sound.mjs first)");
 
 const vf = [];
-if (scale !== 1) vf.push(`scale=${Math.round(1920 * scale)}:${Math.round(1080 * scale)}:flags=lanczos`);
+if (scale !== 1) vf.push(`scale=${Math.round(1920 * res * scale)}:${Math.round(1080 * res * scale)}:flags=lanczos`);
 vf.push("scale=in_range=full:out_range=tv:out_color_matrix=bt709", "format=yuv420p");
 const ff = ["-y", "-loglevel", "warning", "-thread_queue_size", "64", "-f", "image2pipe", "-framerate", String(fps), "-c:v", "png", "-i", "pipe:0"];
 if (hasAudio) ff.push("-ss", String(from / fps), "-i", audioPath);
 ff.push(
   "-vf", vf.join(","),
   "-c:v", "libx264", "-preset", preset, "-crf", crf, "-tune", "animation",
-  "-profile:v", "high", "-pix_fmt", "yuv420p",
+  "-profile:v", "high", ...(res > 1 ? ["-level", "5.2"] : []), "-pix_fmt", "yuv420p",
   "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
   "-movflags", "+faststart",
 );
