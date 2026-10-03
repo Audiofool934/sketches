@@ -97,7 +97,4 @@ node tools/render.mjs --out out --w 1920 --fps 60 --sub 4
 Playwright seeks every frame, the page posts raw pixels back, ffmpeg keeps lossless segments so a stopped render resumes, and the finish is H.264, `yuv420p`, CRF 16.
 On a 4-core machine with SwiftShader and no GPU, the film takes about two hours.
 
-Two cuts of the film live on this branch, in Git LFS (`git lfs pull` if a clone only has the pointers):
-
-- `odyssey-lantern.mp4`: the master, H.264 CRF 16, 120 MB.
-- `odyssey-lantern-small.mp4`: the same 1920 by 1080 at 60 fps, two-pass at 8.1 Mbit/s, 27 MB, for places with an upload limit.
+The film is on this branch in Git LFS (`git lfs pull` if a clone only has the pointer): `odyssey-lantern.mp4`, H.264 CRF 16, 120 MB.
