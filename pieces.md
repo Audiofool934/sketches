@@ -5,3 +5,4 @@
 - piece/four-millimeters: .pieces/four-millimeters/index.html
 - piece/lighthouse-sunset: .pieces/lighthouse-sunset/index.html
 - piece/between-hand-and-sound: .pieces/between-hand-and-sound/index.html
+- piece/flow-matching: .pieces/flow-matching/index.html
