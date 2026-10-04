@@ -1,0 +1,462 @@
+{
+  "film": 1,
+  "title": "A Light That Endures",
+  "fps": [
+    60,
+    1
+  ],
+  "frames": 12379,
+  "band": [
+    4096,
+    2160
+  ],
+  "audioRate": 48000,
+  "sourceDuration": 206.30689583333333,
+  "look": [
+    [
+      0,
+      0.55
+    ],
+    [
+      0.8,
+      0.8
+    ],
+    [
+      1.6,
+      1
+    ],
+    [
+      202.5,
+      1
+    ],
+    [
+      206.3069,
+      0.52
+    ]
+  ],
+  "scenes": [
+    {
+      "id": "creation",
+      "picture": "middle-earth/creation",
+      "start": 0,
+      "end": 8.2,
+      "in": {
+        "type": "laid"
+      }
+    },
+    {
+      "id": "trees",
+      "picture": "middle-earth/trees",
+      "start": 6.35,
+      "end": 21.7,
+      "in": {
+        "type": "flow",
+        "launch": [
+          6.35,
+          7.12
+        ],
+        "land": [
+          7.34,
+          7.75
+        ],
+        "focus": [
+          1800,
+          1000
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "crown",
+      "picture": "middle-earth/crown",
+      "start": 19.85,
+      "end": 35.2,
+      "in": {
+        "type": "flow",
+        "launch": [
+          19.85,
+          20.62
+        ],
+        "land": [
+          20.84,
+          21.25
+        ],
+        "focus": [
+          1800,
+          1150
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "forge",
+      "picture": "middle-earth/forge",
+      "start": 33.35,
+      "end": 46.7,
+      "in": {
+        "type": "flow",
+        "launch": [
+          33.35,
+          34.12
+        ],
+        "land": [
+          34.34,
+          34.75
+        ],
+        "focus": [
+          1800,
+          910
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "numenor",
+      "picture": "middle-earth/numenor",
+      "start": 44.85,
+      "end": 55.5,
+      "in": {
+        "type": "flow",
+        "launch": [
+          44.85,
+          45.62
+        ],
+        "land": [
+          45.84,
+          46.25
+        ],
+        "focus": [
+          1800,
+          1000
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "alliance",
+      "picture": "middle-earth/alliance",
+      "start": 53.65,
+      "end": 63,
+      "in": {
+        "type": "flow",
+        "launch": [
+          53.65,
+          54.42
+        ],
+        "land": [
+          54.64,
+          55.05
+        ],
+        "focus": [
+          2040,
+          1490
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "shire",
+      "picture": "middle-earth/shire",
+      "start": 61.15,
+      "end": 71.7,
+      "in": {
+        "type": "flow",
+        "launch": [
+          61.15,
+          61.92
+        ],
+        "land": [
+          62.14,
+          62.55
+        ],
+        "focus": [
+          1200,
+          1235
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "fellowship",
+      "picture": "middle-earth/fellowship",
+      "start": 69.85,
+      "end": 83.7,
+      "in": {
+        "type": "flow",
+        "launch": [
+          69.85,
+          70.62
+        ],
+        "land": [
+          70.84,
+          71.25
+        ],
+        "focus": [
+          1700,
+          1450
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "moria",
+      "picture": "middle-earth/moria",
+      "start": 81.85,
+      "end": 94.7,
+      "in": {
+        "type": "flow",
+        "launch": [
+          81.85,
+          82.62
+        ],
+        "land": [
+          82.84,
+          83.25
+        ],
+        "focus": [
+          1800,
+          630
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "lorien",
+      "picture": "middle-earth/lorien",
+      "start": 92.85,
+      "end": 109.2,
+      "in": {
+        "type": "flow",
+        "launch": [
+          92.85,
+          93.62
+        ],
+        "land": [
+          93.84,
+          94.25
+        ],
+        "focus": [
+          2110,
+          1390
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "argonath",
+      "picture": "middle-earth/argonath",
+      "start": 107.35,
+      "end": 121.7,
+      "in": {
+        "type": "flow",
+        "launch": [
+          107.35,
+          108.12
+        ],
+        "land": [
+          108.34,
+          108.75
+        ],
+        "focus": [
+          1820,
+          1500
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "fangorn",
+      "picture": "middle-earth/fangorn",
+      "start": 119.85,
+      "end": 132.7,
+      "in": {
+        "type": "flow",
+        "launch": [
+          119.85,
+          120.62
+        ],
+        "land": [
+          120.84,
+          121.25
+        ],
+        "focus": [
+          1090,
+          1110
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "rohan",
+      "picture": "middle-earth/rohan",
+      "start": 130.85,
+      "end": 146.7,
+      "in": {
+        "type": "flow",
+        "launch": [
+          130.85,
+          131.62
+        ],
+        "land": [
+          131.84,
+          132.25
+        ],
+        "focus": [
+          1600,
+          1300
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "beacons",
+      "picture": "middle-earth/beacons",
+      "start": 144.85,
+      "end": 159.2,
+      "in": {
+        "type": "flow",
+        "launch": [
+          144.85,
+          145.62
+        ],
+        "land": [
+          145.84,
+          146.25
+        ],
+        "focus": [
+          1050,
+          1130
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "courage",
+      "picture": "middle-earth/courage",
+      "start": 157.35,
+      "end": 171.2,
+      "in": {
+        "type": "flow",
+        "launch": [
+          157.35,
+          158.12
+        ],
+        "land": [
+          158.34,
+          158.75
+        ],
+        "focus": [
+          1720,
+          1400
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "burden",
+      "picture": "middle-earth/burden",
+      "start": 169.35,
+      "end": 183.2,
+      "in": {
+        "type": "flow",
+        "launch": [
+          169.35,
+          170.12
+        ],
+        "land": [
+          170.34,
+          170.75
+        ],
+        "focus": [
+          1490,
+          1500
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "unmaking",
+      "picture": "middle-earth/unmaking",
+      "start": 181.35,
+      "end": 191.2,
+      "in": {
+        "type": "flow",
+        "launch": [
+          181.35,
+          182.12
+        ],
+        "land": [
+          182.34,
+          182.75
+        ],
+        "focus": [
+          1820,
+          730
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "renewal",
+      "picture": "middle-earth/renewal",
+      "start": 189.35,
+      "end": 199.2,
+      "in": {
+        "type": "flow",
+        "launch": [
+          189.35,
+          190.12
+        ],
+        "land": [
+          190.34,
+          190.75
+        ],
+        "focus": [
+          1800,
+          1200
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    },
+    {
+      "id": "havens",
+      "picture": "middle-earth/havens",
+      "start": 197.35,
+      "end": 206.31666666666666,
+      "in": {
+        "type": "flow",
+        "launch": [
+          197.35,
+          198.12
+        ],
+        "land": [
+          198.34,
+          198.75
+        ],
+        "focus": [
+          2130,
+          480
+        ],
+        "curve": 0.9,
+        "bands": 16
+      }
+    }
+  ]
+}

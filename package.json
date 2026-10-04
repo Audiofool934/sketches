@@ -1,0 +1,13 @@
+{
+  "name": "middle-earth-may-it-be",
+  "private": true,
+  "type": "module",
+  "description": "A musical mosaic epic of Middle-earth, cut to the supplied recording of May It Be.",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "render": "node tools/render.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}
