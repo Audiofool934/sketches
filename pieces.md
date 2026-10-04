@@ -9,3 +9,4 @@
 - piece/one-arcminute: .pieces/one-arcminute/index.html
 - piece/odyssey-trailers: .pieces/odyssey-trailers/index.html
 - piece/the-road-home: .pieces/the-road-home/index.html
+- piece/middle-earth-may-it-be: .pieces/middle-earth-may-it-be/index.html
