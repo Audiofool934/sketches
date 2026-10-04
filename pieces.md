@@ -8,3 +8,4 @@
 - piece/flow-matching: .pieces/flow-matching/index.html
 - piece/one-arcminute: .pieces/one-arcminute/index.html
 - piece/odyssey-trailers: .pieces/odyssey-trailers/index.html
+- piece/the-road-home: .pieces/the-road-home/index.html
