@@ -9,6 +9,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = parseInt(process.argv[2] || "8017", 10);
 const types = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".png": "image/png", ".mp4": "video/mp4", ".mkv": "video/x-matroska", ".flac": "audio/flac", ".md": "text/plain; charset=utf-8" };
 
+function sendFile(file, options, res) {
+  const stream = fs.createReadStream(file, options);
+  res.once("close", () => stream.destroy());
+  stream.once("error", error => res.destroy(error));
+  stream.pipe(res);
+}
+
 export function handler(req, res) {
   const url = new URL(req.url, "http://x");
   let file = path.join(root, decodeURIComponent(url.pathname));
@@ -25,13 +32,13 @@ export function handler(req, res) {
     const start=Number(range[1]),end=range[2]?Math.min(Number(range[2]),size-1):size-1;
     if(start>=size||end<start){res.writeHead(416,{"content-range":`bytes */${size}`});res.end();return;}
     res.writeHead(206,{...headers,"content-range":`bytes ${start}-${end}/${size}`,"content-length":end-start+1});
-    if(req.method==='HEAD')res.end();else fs.createReadStream(file,{start,end}).pipe(res);
+    if(req.method==='HEAD')res.end();else sendFile(file,{start,end},res);
   }else{
     res.writeHead(200,{...headers,"content-length":size});
-    if(req.method==='HEAD')res.end();else fs.createReadStream(file).pipe(res);
+    if(req.method==='HEAD')res.end();else sendFile(file,undefined,res);
   }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  http.createServer(handler).listen(port, "127.0.0.1", () => console.log(`http://127.0.0.1:${port}/?film=1`));
+  http.createServer(handler).listen(port, "127.0.0.1", () => console.log(`http://127.0.0.1:${port}/`));
 }

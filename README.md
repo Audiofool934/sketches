@@ -12,6 +12,17 @@ The 8K movie uses the Mac's HEVC quality mode; it is not described as lossless v
 The lossless RGB archive is the ordered set of FFV1 segments and `segments.txt` in `out/render/master-8k/`.
 All large outputs and the copied source audio live on `/Volumes/Audioroom/Sketches/middle-earth-may-it-be` through the local `out` link.
 
+| Delivery | Dimensions | Size | Sound |
+| --- | --- | --- | --- |
+| 4K viewing copy | 4096 by 2160 | 1.85 GB | AAC, 320 kbit/s |
+| 8K HEVC master | 8192 by 4320 | 27.17 GB | Original FLAC |
+| Lossless RGB archive | 8192 by 4320, 75 FFV1 segments | 349.27 GB | Supplied FLAC retained separately |
+
+Both movies contain 12,379 frames at 60 fps, covering the complete 206.306895833-second recording.
+The verified 8K soundtrack is sample-for-sample identical to the supplied source.
+The 4K soundtrack preserves all 9,902,731 samples with zero offset and a measured 45.33 dB signal-to-error ratio against the original.
+File sizes use decimal GB.
+
 For a browser player, run `npm run serve` and open http://127.0.0.1:8017/.
 For an exact rendered moment, open `http://127.0.0.1:8017/?w=1920&sub=4&t=177`.
 The single-time preview loads only the necessary scenes.
@@ -20,7 +31,7 @@ The preview uses a real WebGL2 context, with native Metal on macOS.
 ## Reproduce
 
 Install Node.js, ffmpeg, Python with NumPy, and the dependencies in `package.json`.
-Install the Playwright Chromium browser with `npx playwright install chromium` if it is not already present.
+Install the matching Playwright Chromium browser with `npx playwright@1.63.0 install chromium` if it is not already present.
 Place the supplied recording at `ref/may-it-be.flac`, or keep the existing link to the Audioroom copy.
 Run `caffeinate -i node tools/finish.mjs` on macOS to render, encode, and verify the full delivery.
 The delivery encoder uses macOS VideoToolbox.
@@ -48,6 +59,7 @@ Encoding rebuilds continuous timestamps from frame numbers, avoiding accumulated
 ## Evidence
 
 `out/review/` contains timestamped visual passes, transition strips, and deterministic-seek receipts.
+`out/review/export/` contains a 360 px contact sheet of all nineteen scenes, the Ring-fall action strip, and thirty-one frames extracted from the finished 4K file.
 `out/render/master-8k/bench.json` records the completed frame ranges and actual render cost.
 `out/movies/verification.json` is written only after the complete exported dimensions, frame counts, and audio checks pass.
 The 8K soundtrack must decode to the exact same PCM samples as the supplied FLAC.
