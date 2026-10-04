@@ -1,0 +1,13 @@
+{
+  "name": "the-road-home",
+  "private": true,
+  "type": "module",
+  "description": "An original mosaic journey through Middle-earth.",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "render": "node tools/render.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

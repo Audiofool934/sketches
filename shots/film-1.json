@@ -1,0 +1,15 @@
+{
+  "film": 1,
+  "title": "The Road Home",
+  "fps": [60, 1],
+  "frames": 2160,
+  "band": [3840, 2160],
+  "look": [[0, 1], [36, 1]],
+  "scenes": [
+    {"id":"shire","picture":"shire","start":0,"end":8.2,"in":{"type":"laid"}},
+    {"id":"ring","picture":"ring","start":6.6,"end":13.8,"in":{"type":"flow","launch":[6.6,7.3],"land":[7.35,8.1],"focus":[1600,670]}},
+    {"id":"moria","picture":"moria","start":12,"end":21.2,"in":{"type":"flow","launch":[12,12.7],"land":[12.9,13.6],"focus":[1600,590]}},
+    {"id":"doom","picture":"doom","start":19.1,"end":30.3,"in":{"type":"flow","launch":[19.1,19.95],"land":[20,21],"focus":[2150,455]}},
+    {"id":"home","picture":"home","start":28.5,"end":36.1,"in":{"type":"flow","launch":[28.5,29.25],"land":[29.4,30.2],"focus":[1420,810]}}
+  ]
+}
