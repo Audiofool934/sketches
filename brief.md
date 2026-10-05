@@ -147,7 +147,7 @@ Every state change lands on a beat. Hero reveals land on a downbeat.
 - 45.00 Only the fourth fits its ring. An orange band on the axis marks the depth of field: 2.0 cm. "Inside the ring, it looks sharp."
 - 47.50 The aperture closes one stop per beat to f/16. Every disc shrinks by √2 per stop. A domino lights with a wooden clack when its disc fits the ring. The band and its readout grow to 23.5 cm. The iris closes and the light halves each stop, to 1/128.
 - 52.50 "1/128 the light. About 12 times the depth."
-- 55.00 "The aperture sets the light and the blur."
+- 55.00 "The aperture sets the light and the blur." The aperture swings back open to f/1.4 and closes again to f/16: the light and the depth move against each other, the dominoes fall out of the zone with soft ticks and clack back in.
 
 ### E. The answer, 0:57.5–1:12.5
 

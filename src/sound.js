@@ -522,10 +522,16 @@
     }
     put(fx, T.band, ping(mtof(87), 0.3, 0.15), 0.05, 0, 0.4);
     T.stopsD.forEach((t, i) => apClick(t, i + 2, 1));
-    // each domino clacks when its disc fits the ring, panned to where it stands
-    M.entries().forEach(({ i, t }) => {
+    // the swing back open and closed again: the ring turning through its detents
+    blades(T.sweepOpen, 0.5, 0.7);
+    blades(T.sweepClose, 0.5, 0.7);
+    M.stopMarks(M.stopD, T.sweepOpen - 0.01, T.answer).slice(1).forEach(([t, k]) => apClick(t, k, 0.45));
+    // each domino clacks when its disc fits the ring, panned to where it stands,
+    // and ticks softly when it falls out again
+    M.crossings().forEach(({ i, t, enter }) => {
       const pan = ((i / 7) * 2 - 1) * 0.75;
-      put(fx, t, clack(2100 + 140 * i), 0.3, pan, 0.18);
+      if (enter) put(fx, t, clack(2100 + 140 * i), 0.3, pan, 0.18);
+      else put(fx, t, tock(900 + 60 * i, 0.02), 0.07, pan, 0.1);
     });
     put(fx, T.light, glass(84, 0.8, 0.8), 0.035, 0, 0.5, 0.2);
 

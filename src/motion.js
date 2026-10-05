@@ -19,7 +19,13 @@
     ]);
   // The aperture, in stops (1 = f/1.4, 8 = f/16), clicking down in part A and again in part D.
   const stopA = (t) => springTo(t, [[0, 1], ...T.stopsA.map((tt, i) => [tt, 2 + i, SPR.snap])]);
-  const stopD = (t) => springTo(t, [[0, 1], ...T.stopsD.map((tt, i) => [tt, 2 + i, SPR.snap])]);
+  const stopD = (t) =>
+    springTo(t, [
+      [0, 1],
+      ...T.stopsD.map((tt, i) => [tt, 2 + i, SPR.snap]),
+      [T.sweepOpen, 1, SPR.long],
+      [T.sweepClose, 8, SPR.long],
+    ]);
 
   // Part B is schematic: a thin lens of focal length fd px, a point u px in front of it.
   const B = { ax: 620, lx: 1040, la: 250, fd: 170, uF: 578, uNear: 391, uFar: 952 };
@@ -41,20 +47,41 @@
     return { u, v, a, xP: B.lx - u, xI: B.lx + v, disc: (2 * a * Math.abs(v - vs)) / v };
   }
 
-  // When each domino's disc first fits the circle of confusion while stopping down in part D.
-  function entries() {
+  // Every time a domino's disc starts or stops fitting the circle of confusion in part D.
+  function crossings() {
     const out = [];
-    O.ZS.forEach((z, i) => {
-      if (i === O.FOCUS_INDEX) return;
-      for (let t = T.stopsD[0]; t < T.stopsD[6] + 1; t += 0.001) {
-        if (O.disc(z, O.stopN(stopD(t)), O.FOCUS) <= O.coc) {
-          out.push({ i, z, t });
-          break;
+    const inside = O.ZS.map(() => false);
+    for (let t = T.stopsD[0] - 0.01; t < T.answer; t += 0.001) {
+      const N = O.stopN(stopD(t));
+      O.ZS.forEach((z, i) => {
+        if (i === O.FOCUS_INDEX) return;
+        const now = O.disc(z, N, O.FOCUS) <= O.coc;
+        if (now !== inside[i]) {
+          out.push({ i, z, t, enter: now });
+          inside[i] = now;
         }
-      }
-    });
+      });
+    }
     return out;
   }
 
-  FM.motion = { focusA, stopA, stopD, B, vOf, uB, apB, opticsB, entries };
+  // The marked stop a readout shows: it changes when the aperture crosses a half stop.
+  // Returns [[t, k], ...] starting with [t0, k(t0)].
+  function stopMarks(stopFn, t0, t1) {
+    const out = [[t0, Math.round(stopFn(t0))]];
+    for (let t = t0; t < t1; t += 0.001) {
+      const k = Math.round(stopFn(t));
+      if (k !== out[out.length - 1][1]) out.push([t, k]);
+    }
+    return out;
+  }
+
+  // What the part D readouts show: each click on its cue, then the swing's crossings.
+  const marksD = () => [
+    [T.chart + 0.3, 1],
+    ...T.stopsD.map((tt, i) => [tt, 2 + i]),
+    ...stopMarks(stopD, T.sweepOpen - 0.01, T.answer).slice(1),
+  ];
+
+  FM.motion = { focusA, stopA, stopD, B, vOf, uB, apB, opticsB, crossings, stopMarks, marksD };
 })();

@@ -111,19 +111,18 @@
     return w;
   }
 
-  // A label that flips through values: the old one leaves upward through a mask while the
-  // new one rises in. values: [[t, text], ...]. Draws runs built by make(text).
-  function flipLabel(ctx, t, values, x, y, base, make, align = "left", dur = 0.26) {
+  // A label that rolls through values like a counter: the old one rises out of a mask as
+  // the new one rises in, a fixed distance apart. values: [[t, text], ...]. The first value
+  // springs in; the last leaves at tOut.
+  function flipLabel(ctx, t, values, x, y, base, make, align = "left", dur = 0.24, tOut = Infinity) {
     let cur = -1;
     for (let i = 0; i < values.length; i++) if (t >= values[i][0]) cur = i;
-    for (let i = Math.max(0, cur - 1); i <= cur; i++) {
-      if (i < 0) continue;
-      const tIn = values[i][0];
-      const tOut = i + 1 < values.length ? values[i + 1][0] : Infinity;
-      const p = i === 0 ? sp(t - tIn, SPR.type) : ease.outCubic(clamp((t - tIn) / dur));
-      const q = t < tOut ? 0 : ease.inCubic(clamp((t - tOut) / dur));
-      riseRuns(ctx, make(values[i][1]), x, y, base, p, q, align);
-    }
+    if (cur < 0) return;
+    const tIn = values[cur][0];
+    const e = cur === 0 ? sp(t - tIn, SPR.type) : ease.inOutCubic(clamp((t - tIn) / dur));
+    const out = t < tOut ? 0 : ease.inCubic(clamp((t - tOut) / 0.3));
+    if (cur > 0 && e < 0.999) riseRuns(ctx, make(values[cur - 1][1]), x, y, base, 1, e, align);
+    riseRuns(ctx, make(values[cur][1]), x, y, base, e, out, align);
   }
 
   // ------------------------------------------------------------------ act A
@@ -142,13 +141,7 @@
 
     // the f-number
     const fv = [[T.fLabel, "1.4"], ...T.stopsA.map((tt, i) => [tt, O.LABELS[2 + i]])];
-    const fOut = phase(t, 0, T.cone - 0.3, SPR.type, 0.3);
-    if (fOut.out < 0.999) {
-      ctx.save();
-      const base = { kind: "serif", size: 150, color: C.ink };
-      flipLabel(ctx, t, fv, 150, 215, base, (s) => [{ s: "f/", italic: true }, { s }]);
-      ctx.restore();
-    }
+    flipLabel(ctx, t, fv, 150, 215, { kind: "serif", size: 150, color: C.ink }, (s) => [{ s: "f/", italic: true }, { s }], "left", 0.24, T.cone - 0.3);
 
     const base = { kind: "serif", size: 92, color: C.ink };
     const h1 = phase(t, T.headA, T.stopsA[0] - 0.2);
@@ -1086,12 +1079,22 @@
     6: [[1, 1], [-1, 1], [1, 0], [-1, 0], [1, -1], [-1, -1]],
   };
 
-  // A small upright domino standing on yBase, centered at x.
-  function dominoIcon(ctx, x, yBase, w, pips, alpha, lit) {
+  // When each domino's disc comes to fit its ring, and the stops the readouts show.
+  const ENTRIES = M.crossings().filter((c) => c.enter);
+  const lastEntry = (i, t) => ENTRIES.reduce((m, c) => (c.i === i && c.t <= t ? c.t : m), undefined);
+  const MARKS_D = M.marksD();
+
+  // A small upright domino standing on yBase, centered at x. pop: a brief jump in scale.
+  function dominoIcon(ctx, x, yBase, w, pips, alpha, lit, pop = 0) {
     if (alpha <= 0.001) return;
     const h = w * 2;
     ctx.save();
     ctx.globalAlpha = alpha;
+    if (pop > 0.001) {
+      ctx.translate(x, yBase);
+      ctx.scale(1 + pop, 1 + pop);
+      ctx.translate(-x, -yBase);
+    }
     ctx.fillStyle = lit ? "#efe6d0" : "#4b4a50";
     ctx.beginPath();
     ctx.roundRect(x - w / 2, yBase - h, w, h, w * 0.12);
@@ -1131,7 +1134,7 @@
     ctx.textAlign = "center";
     for (let z = 700; z <= 950; z += 50) {
       const x = chX(z);
-      const a = clamp((ap - ((x - CH.x0) / (CH.x1 - CH.x0)) * 0.92) * 4);
+      const a = clamp((ap - ((x - CH.x0) / (CH.x1 - CH.x0)) * 0.75) * 4);
       if (a <= 0) continue;
       ctx.globalAlpha = (1 - gone) * a;
       ctx.fillStyle = C.dim;
@@ -1161,7 +1164,9 @@
       if (p <= 0.001) return;
       const c = O.disc(d.z, N, s);
       const inside = c <= O.coc;
-      dominoIcon(ctx, x, CH.axis - 10, 40, PIPS_ICON[i], clamp(p * 1.4), inside);
+      const te = lastEntry(i, t);
+      const pop = te !== undefined && t >= te ? 0.28 * Math.pow(clamp(1 - (t - te) / 0.3), 2) : 0;
+      dominoIcon(ctx, x, CH.axis - 10, 40, PIPS_ICON[i], clamp(p * 1.4), inside, pop);
       // the blur disc
       const dpx = Math.max(c * CH.k, 7) * p;
       ctx.save();
@@ -1185,18 +1190,18 @@
     });
 
     // the f-number, with the iris it sets
-    const fv = [[T.chart + 0.3, "1.4"], ...T.stopsD.map((tt, i) => [tt, O.LABELS[2 + i]])];
+    const fv = MARKS_D.map(([tt, k]) => [tt, O.LABELS[k]]);
     flipLabel(ctx, t, fv, 150, 250, { kind: "serif", size: 150, color: C.ink }, (v) => [{ s: "f/", italic: true }, { s: v }]);
     const ir = sp(t - (T.chart + 0.5), SPR.card);
     if (ir > 0.001) miniIris(ctx, 640, 200, 78 * ir, 1.414 / N);
 
     // light and depth
-    const lv = [[T.chart + 0.7, "1"], ...T.stopsD.map((tt, i) => [tt, "1/" + Math.pow(2, i + 1)])];
+    const lv = MARKS_D.map(([tt, k], j) => [j ? tt : T.chart + 0.7, k === 1 ? "1" : "1/" + Math.pow(2, k - 1)]);
     const lb = phase(t, T.chart + 0.6, Infinity, SPR.type);
-    riseRuns(ctx, [{ s: "light" }], 1290, 128, { kind: "mono", size: 48, color: C.dim }, lb.in, 0, "right");
+    riseRuns(ctx, [{ s: "light" }], 1290, 124, { kind: "mono", size: 54, color: C.dim }, lb.in, 0, "right");
     flipLabel(ctx, t, lv, 1290, 250, { kind: "serif", size: 110, color: C.ink }, (v) => [{ s: v }], "right");
     const db = phase(t, T.band, Infinity, SPR.type);
-    riseRuns(ctx, [{ s: "depth of field" }], 1770, 128, { kind: "mono", size: 48, color: C.accent }, db.in, 0, "right");
+    riseRuns(ctx, [{ s: "depth of field" }], 1770, 124, { kind: "mono", size: 54, color: C.accent }, db.in, 0, "right");
     if (db.in > 0.001) {
       K.masked(ctx, 1380, 1800, 250, 110, 40, db.in, 0, () => {
         const cm = (zf - zn) / 10;

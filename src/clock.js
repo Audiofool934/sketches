@@ -56,6 +56,8 @@
     stopsD: [0, 1, 2, 3, 4, 5, 6].map((i) => at(20, 0) + i * BEAT), // f/2 ... f/16
     light: at(22, 0),
     both: at(23, 0),
+    sweepOpen: at(23, 0), // the aperture swings back open...
+    sweepClose: at(23, 2), // ...and closes again
 
     // E. The answer
     answer: at(24, 0),
