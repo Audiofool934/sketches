@@ -1,4 +1,4 @@
-// Deterministic, resumable mosaic export. All frame storage stays on Audioroom.
+// Deterministic, resumable mosaic export. Frame storage uses the selected output directory.
 // Scene-sized browser lifetimes bound GPU memory; FFV1 preserves rendered RGB.
 import http from 'node:http';
 import fs from 'node:fs';

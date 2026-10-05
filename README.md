@@ -11,7 +11,9 @@ The 27.17 GB 8K HEVC master was deleted at the user's request on 2026-10-05 and 
 That export used HEVC 4:2:2 10-bit with FLAC; its video was quality-encoded, not lossless.
 The 349.27 GB of lossless FFV1 intermediate frames were deleted at the user's request on 2026-10-05.
 The source code and original music can regenerate them; small render records remain in `out/render/master-8k-records/`.
-All large outputs and the copied source audio live on `/Volumes/Audioroom/Sketches/middle-earth-may-it-be` through the local `out` link.
+Outputs live in this worktree's real `out/` directory, and the original music is the local file `ref/may-it-be.flac`.
+Both directories follow the repository convention for local assets excluded from Git.
+The worktree is `.pieces/middle-earth-may-it-be` on branch `piece/middle-earth-may-it-be`.
 
 | Delivery | Dimensions | Size | Sound |
 | --- | --- | --- | --- |
@@ -33,7 +35,7 @@ The preview uses a real WebGL2 context, with native Metal on macOS.
 
 Install Node.js, ffmpeg, Python with NumPy, and the dependencies in `package.json`.
 Install the matching Playwright Chromium browser with `npx playwright@1.63.0 install chromium` if it is not already present.
-Place the supplied recording at `ref/may-it-be.flac`, or keep the existing link to the Audioroom copy.
+For a fresh checkout, place the supplied recording at `ref/may-it-be.flac`; the current worktree already contains this local file.
 Run `caffeinate -i node tools/finish.mjs` on macOS to render, encode, and verify the full delivery.
 This command also regenerates the deleted intermediates and 8K movie.
 It skips encoding only when both finished movies still match the saved encoding receipt; otherwise it encodes both delivery files.
@@ -61,6 +63,7 @@ Encoding rebuilds continuous timestamps from frame numbers, avoiding accumulated
 
 ## Evidence
 
+`out/relocation.json` records the move into this worktree and SHA-256 verification of all 300 migrated files before the external copy was removed.
 `out/review/` contains timestamped visual passes, transition strips, and deterministic-seek receipts.
 `out/review/export/` contains a 360 px contact sheet of all nineteen scenes, the Ring-fall action strip, and thirty-one frames extracted from the finished 4K file.
 `out/render/master-8k-records/bench.json` records the original completed frame ranges and actual render cost.

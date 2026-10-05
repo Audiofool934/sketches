@@ -23,10 +23,11 @@ Archival image: 8192 by 4320, verified by a native GPU render at the final setti
 Required viewing master: 4096 by 2160.
 60 fps with four shutter samples per frame, using the repository film setting.
 12,379 frames cover the complete recording; the final frame extends by less than 10 milliseconds beyond the source.
-Render directories live at `/Volumes/Audioroom/Sketches/middle-earth-may-it-be`.
+Render directories live under this worktree's local `out/` directory, and the supplied soundtrack lives at `ref/may-it-be.flac`.
 The viewing copy uses H.264, yuv420p, CRF 16 and AAC 320 kb/s.
 The 8K movie uses HEVC 4:2:2 10-bit encoding at quality 70 and preserves the supplied FLAC audio.
-The retained FFV1 RGB segments are the lossless image archive.
+FFV1 RGB segments provide lossless intermediates when rendering.
+The completed intermediate archive and 8K movie were removed after delivery at the user's request; the 4K movie is retained.
 Resolution is not a substitute for composition, material detail, or musical timing.
 
 ## Musical reading

@@ -59,6 +59,9 @@ The original lossless RGB archive contained 75 FFV1 segments totaling 349,267,31
 Those regenerable intermediate videos were deleted at the user's request on 2026-10-05, preserving the source, original music, both finished movies, and small render records in `out/render/master-8k-records/`.
 The 8K HEVC movie was subsequently deleted at the user's request on the same day, as recorded in `out/movies/8k-removal.json`.
 The 4K movie, source code, and original music remain available.
+On 2026-10-05, all remaining external files were moved into the original repository worktree, with outputs under `out/` and music at `ref/may-it-be.flac`.
+Every one of the 300 migrated files passed SHA-256 verification before the external copy was removed.
+The relocation receipt is `out/relocation.json`; older reports retain their historical source paths.
 The 8K HEVC 4:2:2 10-bit movie is 27,171,066,274 bytes, and the 4K H.264 movie is 1,848,109,316 bytes.
 The encoder reported zero dropped and zero duplicated frames.
 Both deliveries passed the complete frame-count, dimensions, pixel-format, frame-clock, and source-fingerprint checks.
