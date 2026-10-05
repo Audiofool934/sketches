@@ -7,8 +7,8 @@ The other Lord of the Rings piece and Odyssey source remain separate.
 ## Watch
 
 Open `out/movies/a-light-that-endures-4k.mp4` for the 4096 by 2160, 60 fps viewing copy.
-Open `out/movies/a-light-that-endures-8k.mkv` in a player supporting HEVC 4:2:2 10-bit and FLAC for the native 8192 by 4320 master.
-The 8K movie uses the Mac's HEVC quality mode; it is not described as lossless video.
+The 27.17 GB 8K HEVC master was deleted at the user's request on 2026-10-05 and can be regenerated from the source and original music.
+That export used HEVC 4:2:2 10-bit with FLAC; its video was quality-encoded, not lossless.
 The 349.27 GB of lossless FFV1 intermediate frames were deleted at the user's request on 2026-10-05.
 The source code and original music can regenerate them; small render records remain in `out/render/master-8k-records/`.
 All large outputs and the copied source audio live on `/Volumes/Audioroom/Sketches/middle-earth-may-it-be` through the local `out` link.
@@ -16,11 +16,11 @@ All large outputs and the copied source audio live on `/Volumes/Audioroom/Sketch
 | Delivery | Dimensions | Size | Sound |
 | --- | --- | --- | --- |
 | 4K viewing copy | 4096 by 2160 | 1.85 GB | AAC, 320 kbit/s |
-| 8K HEVC master | 8192 by 4320 | 27.17 GB | Original FLAC |
+| 8K HEVC master | 8192 by 4320 | Removed; regenerable | Original FLAC retained separately |
 | Lossless RGB intermediates | 8192 by 4320, 75 FFV1 segments | Removed; regenerable | Supplied FLAC retained separately |
 
-Both movies contain 12,379 frames at 60 fps, covering the complete 206.306895833-second recording.
-The verified 8K soundtrack is sample-for-sample identical to the supplied source.
+Both movies were exported with 12,379 frames at 60 fps, covering the complete 206.306895833-second recording.
+The delivered 8K soundtrack was verified sample-for-sample identical to the supplied source.
 The 4K soundtrack preserves all 9,902,731 samples with zero offset and a measured 45.33 dB signal-to-error ratio against the original.
 File sizes use decimal GB.
 
@@ -35,7 +35,8 @@ Install Node.js, ffmpeg, Python with NumPy, and the dependencies in `package.jso
 Install the matching Playwright Chromium browser with `npx playwright@1.63.0 install chromium` if it is not already present.
 Place the supplied recording at `ref/may-it-be.flac`, or keep the existing link to the Audioroom copy.
 Run `caffeinate -i node tools/finish.mjs` on macOS to render, encode, and verify the full delivery.
-This command also regenerates the deleted intermediates; matching completed movie files are retained.
+This command also regenerates the deleted intermediates and 8K movie.
+It skips encoding only when both finished movies still match the saved encoding receipt; otherwise it encodes both delivery files.
 The delivery encoder uses macOS VideoToolbox.
 The native frame exporter can run on other systems with an appropriate WebGL backend selected through `ANGLE`.
 The exact supplied audio hash is retained in `analysis/music-analysis.json`.
@@ -64,6 +65,7 @@ Encoding rebuilds continuous timestamps from frame numbers, avoiding accumulated
 `out/review/export/` contains a 360 px contact sheet of all nineteen scenes, the Ring-fall action strip, and thirty-one frames extracted from the finished 4K file.
 `out/render/master-8k-records/bench.json` records the original completed frame ranges and actual render cost.
 The corresponding `archive-removal.json` records the intermediate-frame deletion and preservation checks.
+`out/movies/8k-removal.json` records the later deletion of the 8K movie while preserving the 4K file, source code, and original music.
 `out/movies/verification.json` is written only after the complete exported dimensions, frame counts, and audio checks pass.
 The 8K soundtrack must decode to the exact same PCM samples as the supplied FLAC.
 The 4K soundtrack is AAC and is checked for zero sample offset and preservation of the complete recording.
