@@ -230,20 +230,8 @@ Also check a fast-action strip and a 360 px phone sheet.
 
 Open work, for whoever picks this up next. Delete each line when it is done.
 
-1. Re-render both films. The lockup now reads "Sharp is just / blur you can't see.", but the committed MP4s still end on the old line, "Depth of field is / the blur you can't see." From this folder:
-
-   ```bash
-   npm install
-   npm run sound          # out/soundtrack.wav, a few seconds; the render muxes it in
-   npm run video          # out/one-arcminute.mp4, 1080p
-   node tools/render.mjs --res 2 --preset medium --out out/one-arcminute-4k.mp4
-   ```
-
-   Playwright needs a Chromium: run `npx playwright install chromium`, or set `CHROME_PATH` to an installed Chrome or Chromium.
-2. Check the new files before committing: both run 3:58.75, and the last frame shows the new lockup (`ffmpeg -sseof -1 -i out/one-arcminute.mp4 -frames:v 1 out/last.png`).
-3. Copy both into this folder, commit them (Git LFS tracks `*.mp4`), and push `piece/one-arcminute`.
-4. Listen once on headphones or speakers. The mix was only checked by measurement (−14.0 LUFS, true peak −1.05 dBTP). If something sounds wrong, fix it in `src/sound.js`, then run step 1 again.
-5. Once the films are pushed, Audiofool934/sketches#4 (the index line on `main`) can be marked ready and merged.
+1. Listen once on headphones or speakers. The mix was only checked by measurement (-14.0 LUFS, true peak -1.05 dBTP). If something sounds wrong, fix it in `src/sound.js`, then re-render (`npm run sound`, `npm run video`, `node tools/render.mjs --res 2 --preset medium --out out/one-arcminute-4k.mp4`; set `CHROME_PATH` to Chrome if Playwright has no matching Chromium).
+2. Audiofool934/sketches#4 (the index line on `main`) can be marked ready and merged.
 
 ## Notes
 
