@@ -1,0 +1,14 @@
+{
+  "name": "borrowed-lines",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Borrowed Lines - a psychedelic 2D music video rendered deterministically with Skia canvas and FFmpeg",
+  "scripts": {
+    "still": "node src/still.mjs",
+    "render": "node src/render.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.9"
+  }
+}
