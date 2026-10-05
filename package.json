@@ -1,0 +1,16 @@
+{
+  "name": "one-arcminute",
+  "private": true,
+  "type": "module",
+  "description": "One Arcminute: why a lens focuses at one distance but a whole range looks sharp, as a film drawn from code.",
+  "scripts": {
+    "fonts": "node tools/fonts.mjs",
+    "sound": "node tools/sound.mjs",
+    "video": "node tools/render.mjs",
+    "build": "node tools/sound.mjs && node tools/render.mjs",
+    "still": "node tools/still.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1"
+  }
+}
