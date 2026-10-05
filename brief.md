@@ -187,3 +187,27 @@ Fix the three worst problems by timestamp each pass. Ship when every score is 8 
 Also check a fast-action strip and a 360 px phone sheet.
 
 ## Notes
+
+Review passes, scored hook / phone readability / motion / variety / composition / sync.
+
+Pass 1, the first cut: 8 / 6 / 7 / 9 / 7 / 8.
+
+- Labels were too small to read at 360 px wide all through the diagrams (12–21 s, 23–42 s, 43–57 s, 63–67 s). Labels that carry meaning are now 46–56 px.
+- 22.5–23.0: the zoom into the sensor showed an empty dark box before the grid appeared. The photosites now show inside the panel as it grows.
+- 42.3–42.9: the circle of confusion's labels hung on while the ring travelled into the chart. They leave first, then the ring moves.
+
+Pass 2, with the soundtrack and the first full render: 8 / 7 / 8 / 9 / 8 / 9.
+In the encoded file every aperture click lands within 2 ms of its cue.
+
+- 5.0–6.9 and 47.5–51.3: the f-number and light readouts overlapped as they flipped ("f/2.8" over "f/4"). They roll like counters now, the old value rising out as the new one rises in.
+- 48.8–51.4: a domino entering the sharp zone clacked but did nothing on screen. It pops.
+- 43–57: the last axis label stayed dim and the readout labels were small. Fixed.
+
+Pass 3: 8 / 8 / 8 / 9 / 8 / 9.
+
+- 52.5–57.5: the chart held still for five seconds under two captions. Under "The aperture sets the light and the blur." the aperture now swings back open to f/1.4 and shut again, so the light and the depth trade places; the dominoes tick out and clack back in.
+- Left as they are: 58.5–60.0, a second and a half of the picture with no caption after the iris opens, as a breath before the answer; and the axis numbers in part D, small on a phone but secondary to the dominoes and the band.
+
+Rendering: the photograph first took 200 ms a subframe. The city is now blurred from a ladder of pre-blurred copies, and the table and its reflections are drawn directly, so a subframe takes 50–80 ms and the film renders in about five minutes on four cores.
+
+The soundtrack is checked by measurement, not by ear: −14.0 LUFS integrated, true peak −1.3 dBTP, every bar between −12 and −16 LUFS except the fade-out.
