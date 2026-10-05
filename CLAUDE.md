@@ -23,6 +23,26 @@ Read the one stack note that matches the idea.
 Read a kit only when the brief names that look.
 A piece names its stack in `brief.md` and does not copy these notes onto its branch.
 
+## Working locally
+
+Pieces are made and rendered on the owner's machine, not in a cloud container.
+To pick up an existing piece, run from the main checkout:
+
+```bash
+git fetch origin piece/<slug>
+git worktree add .pieces/<slug> piece/<slug>
+cd .pieces/<slug> && git lfs pull && npm install
+```
+
+Read the piece's `brief.md` first.
+Its `## Next` section, when there is one, is the open work left by the last session.
+Do it before anything else, and delete each line when it is done.
+Leave a new `## Next` when you stop with work unfinished.
+
+Rendered films are committed on the piece branch and tracked by Git LFS.
+Rendering needs a Chromium for Playwright: `npx playwright install chromium`, or set `CHROME_PATH`.
+Changes to `main` go through a pull request.
+
 ## Pick the stack before writing code
 
 Decide from the idea, then write the stack name at the top of `brief.md`.
