@@ -39,7 +39,7 @@
     const ds = Math.hypot(m.a, m.b);
     const sd = sigma * ds;
     const minDown = o.minDown || 1;
-    if (sd < 0.3 && minDown <= 1 && !o.sprite && !o.post && !o.op) {
+    if (sd < (o.sharp || 0.3) && minDown <= 1 && !o.sprite && !o.post && !o.op) {
       drawFn(ctx);
       return;
     }
@@ -213,6 +213,60 @@
     return c;
   }
 
+  // The city blurred at a ladder of sizes, made once and kept; a frame draws the two
+  // nearest sizes, the second one faded in by how far between them it falls.
+  const LEVELS = [0, 1.5, 3, 5, 8, 12, 18, 27, 40, 60]; // sigma, in sprite pixels
+  const levelCache = [];
+  function cityLevel(k) {
+    if (levelCache[k]) return levelCache[k];
+    const src = getCitySprite();
+    const sg = LEVELS[k];
+    const down = sg >= 18 ? 4 : sg >= 8 ? 2 : 1;
+    const pad = Math.ceil((sg * 3) / down) + 2;
+    const c = document.createElement("canvas");
+    c.width = Math.ceil(src.width / down) + pad * 2;
+    c.height = Math.ceil(src.height / down) + pad * 2;
+    const x = c.getContext("2d");
+    if (sg > 0) x.filter = `blur(${sg / down}px)`;
+    x.drawImage(src, pad, pad, src.width / down, src.height / down);
+    return (levelCache[k] = { c, down, pad });
+  }
+  // The city in box (user space), blurred by sigma (user px), drawn only where it meets
+  // vis. flipAt mirrors it about a horizontal line (vis is then in the mirrored space).
+  function drawCity(ctx, box, sigma, vis, flipAt) {
+    const src = getCitySprite();
+    const k = (box.x1 - box.x0) / src.width;
+    const sg = sigma / k;
+    let i = 0;
+    while (i < LEVELS.length - 2 && LEVELS[i + 1] < sg) i++;
+    const w = clamp((sg - LEVELS[i]) / (LEVELS[i + 1] - LEVELS[i]));
+    // the visible rows, in the unmirrored drawing
+    const vy0 = flipAt === undefined ? vis.y0 : 2 * flipAt - vis.y1;
+    const vy1 = flipAt === undefined ? vis.y1 : 2 * flipAt - vis.y0;
+    for (const [lv, a] of [[i, 1], [i + 1, w]]) {
+      if (a <= 0.002) continue;
+      const L = cityLevel(lv);
+      const u = L.down * k;
+      const dx = box.x0 - L.pad * u;
+      const dy = box.y0 - L.pad * u;
+      const x0 = Math.max(dx, vis.x0);
+      const x1 = Math.min(dx + L.c.width * u, vis.x1);
+      const y0 = Math.max(dy, vy0);
+      const y1 = Math.min(dy + L.c.height * u, vy1);
+      if (x1 <= x0 || y1 <= y0) continue;
+      ctx.save();
+      ctx.globalAlpha *= a;
+      if (flipAt !== undefined) {
+        ctx.translate(0, 2 * flipAt);
+        ctx.scale(1, -1);
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = lv === 0 ? "high" : "low";
+      ctx.drawImage(L.c, (x0 - dx) / u, (y0 - dy) / u, (x1 - x0) / u, (y1 - y0) / u, x0, y0, x1 - x0, y1 - y0);
+      ctx.restore();
+    }
+  }
+
   // ------------------------------------------------------------------ the dominoes
 
   const DOM = { w: 24, h: 48, t: 7.5, r: 2.6, pip: 2.15, pitch: 6.4 };
@@ -323,7 +377,7 @@
       const fr = frame(d, mirror);
       c.save();
       if (mirror) c.globalAlpha = 0.3;
-      const side = sideQuad(view, fr);
+      const side = mirror ? null : sideQuad(view, fr);
       if (side) {
         c.fillStyle = side.lit ? "#cbbd9e" : "#7d725e";
         c.beginPath();
@@ -334,20 +388,22 @@
       const m = faceTransform(view, fr);
       c.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
       drawFace(c, d, mirror);
+      if (mirror) {
+        // the reflection sinks into the black lacquer away from the contact line
+        c.globalAlpha = 1;
+        const g = c.createLinearGradient(0, -DOM.h / 2, 0, DOM.h / 2);
+        g.addColorStop(0, "rgba(7,8,12,0)");
+        g.addColorStop(1, "rgba(7,8,12,0.88)");
+        c.fillStyle = g;
+        c.beginPath();
+        c.roundRect(-DOM.w / 2 - 0.5, -DOM.h / 2, DOM.w + 1, DOM.h + 0.5, DOM.r);
+        c.fill();
+      }
       c.restore();
     }
-    // the reflection fades away from the contact line, and the contact itself is dark
+    // the contact itself is dark
     const base = proj(view, [d.x, -HCAM, d.z]);
-    const lo = proj(view, [d.x, -HCAM - DOM.h, d.z]);
     const half = ((DOM.w / 2 + DOM.t) * view.S * O.f) / d.z;
-    c.save();
-    c.globalCompositeOperation = "destination-out";
-    const g = c.createLinearGradient(0, base[1], 0, lo[1]);
-    g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(0,0,0,0.85)");
-    c.fillStyle = g;
-    c.fillRect(base[0] - half, base[1] + 0.5, half * 2, lo[1] - base[1] + 2);
-    c.restore();
     c.fillStyle = "rgba(4,4,6,0.85)";
     const ch = Math.max(0.8, (0.7 * view.S * O.f) / d.z);
     c.fillRect(base[0] - half * 0.62, base[1] - ch * 0.5, half * 1.24, ch);
@@ -371,14 +427,10 @@
     ctx.fillStyle = g;
     ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
 
-    // the dim city at infinity, and its reflection in the table
+    // the dim city at infinity
     const inf = discPx(Infinity);
-    const sprite = getCitySprite();
     const cityBox = { x0: U(CITY.u0), y0: V(CITY.v1), x1: U(CITY.u1), y1: V(CITY.v0) };
-    const vis = { x0: Math.max(cityBox.x0, b.x0), y0: Math.max(cityBox.y0, b.y0), x1: Math.min(cityBox.x1, b.x1), y1: Math.min(cityBox.y1, b.y1) };
-    blurred(ctx, vis, inf * SIGMA, (c) => {
-      c.drawImage(sprite, cityBox.x0, cityBox.y0, cityBox.x1 - cityBox.x0, cityBox.y1 - cityBox.y0);
-    });
+    drawCity(ctx, cityBox, inf * SIGMA, b);
 
     // bright lights as bokeh, in the aperture's shape
     const ap = aperturePath(cam.N);
@@ -395,57 +447,57 @@
     }
     ctx.restore();
 
-    // the table: black lacquer, reflecting the sky and the city
+    // the table: black lacquer, its far edge as soft as the lens makes it
     const yEdge = V(-HCAM / Z_EDGE);
-    const eb = sig(Z_EDGE);
-    blurred(ctx, { x0: b.x0, y0: yEdge, x1: b.x1, y1: b.y1 + 4 }, eb, (c) => {
-      const tg = c.createLinearGradient(0, yEdge, 0, b.y1);
-      const r0 = skyAt(HCAM / Z_EDGE);
-      tg.addColorStop(0, rgb([r0[0] * 0.42 + 4, r0[1] * 0.42 + 4, r0[2] * 0.42 + 6]));
-      tg.addColorStop(0.35, "rgb(9,10,15)");
+    const soft = Math.max(0.8, sig(Z_EDGE) * 1.6);
+    const r0 = skyAt(HCAM / Z_EDGE);
+    const edgeC = [r0[0] * 0.42 + 4, r0[1] * 0.42 + 4, r0[2] * 0.42 + 6];
+    {
+      const y0 = yEdge - soft;
+      const span = b.y1 - y0;
+      const at = (y) => clamp((y - y0) / span);
+      const tg = ctx.createLinearGradient(0, y0, 0, b.y1);
+      tg.addColorStop(0, rgb(edgeC, 0));
+      tg.addColorStop(at(yEdge + soft), rgb(edgeC, 1));
+      tg.addColorStop(at(yEdge + soft) + (1 - at(yEdge + soft)) * 0.35, "rgb(9,10,15)");
       tg.addColorStop(1, "rgb(5,5,8)");
-      c.fillStyle = tg;
-      c.fillRect(b.x0 - 200, yEdge, b.x1 - b.x0 + 400, b.y1 - yEdge + 200);
-    });
-    // what the lacquer reflects fades in under the table's soft far edge
-    const fadeIn = (c) => {
-      c.globalCompositeOperation = "destination-in";
-      const fg = c.createLinearGradient(0, yEdge - eb * 0.2, 0, yEdge + eb * 0.6 + 2);
-      fg.addColorStop(0, "rgba(0,0,0,0)");
-      fg.addColorStop(1, "rgba(0,0,0,1)");
-      c.fillStyle = fg;
-      c.fillRect(b.x0 - 4000, yEdge - 4000, b.x1 - b.x0 + 8000, 8000);
-    };
-    const tableBox = { x0: b.x0, y0: yEdge - eb, x1: b.x1, y1: b.y1 };
+      ctx.fillStyle = tg;
+      ctx.fillRect(b.x0, y0, b.x1 - b.x0, span);
+    }
+    // the lacquer reflects the city and its lights, fading in under the far edge
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(b.x0, yEdge, b.x1 - b.x0, b.y1 - yEdge);
+    ctx.clip();
     ctx.globalAlpha = 0.22;
-    blurred(ctx, tableBox, inf * SIGMA, (c) => {
-      c.save();
-      c.translate(0, 2 * cy);
-      c.scale(1, -1);
-      c.drawImage(sprite, cityBox.x0, cityBox.y0, cityBox.x1 - cityBox.x0, cityBox.y1 - cityBox.y0);
-      c.restore();
-    }, { minDown: 2, post: fadeIn });
+    drawCity(ctx, cityBox, inf * SIGMA, { x0: b.x0, y0: yEdge, x1: b.x1, y1: b.y1 }, cy);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "lighter";
+    const m1 = ctx.getTransform();
+    for (const L of LIGHTS) {
+      if (L.v < HCAM / Z_EDGE) continue;
+      const x = U(L.u);
+      const y = V(-L.v);
+      if (x < b.x0 - dEff || x > b.x1 + dEff || y > b.y1 + dEff) continue;
+      const fade = clamp((y - yEdge - dEff * 0.1) / (dEff * 0.55 + soft + 1));
+      const a = 0.28 * fade * clamp((L.e * 2400 * (S / 53.33) * (S / 53.33)) / (dEff * dEff + 40), 0, 1);
+      bokeh(ctx, m1, ap, x, y, dEff, L.c, a);
+    }
+    ctx.globalCompositeOperation = "source-over";
+    const band = Math.max(4, soft * 1.3);
+    const fg = ctx.createLinearGradient(0, yEdge, 0, yEdge + band);
+    fg.addColorStop(0, rgb(edgeC, 1));
+    fg.addColorStop(1, rgb(edgeC, 0));
+    ctx.fillStyle = fg;
+    ctx.fillRect(b.x0, yEdge, b.x1 - b.x0, band);
     ctx.restore();
-    blurred(ctx, tableBox, 0, (c) => {
-      c.globalCompositeOperation = "lighter";
-      const m1 = c.getTransform();
-      for (const L of LIGHTS) {
-        if (L.v < HCAM / Z_EDGE) continue;
-        const x = U(L.u);
-        const y = V(-L.v);
-        if (x < b.x0 - dEff || x > b.x1 + dEff || y > b.y1 + dEff) continue;
-        const a = 0.28 * clamp((L.e * 2400 * (S / 53.33) * (S / 53.33)) / (dEff * dEff + 40), 0, 1);
-        bokeh(c, m1, ap, x, y, dEff, L.c, a);
-      }
-    }, { post: fadeIn, op: "lighter" });
 
     // dominoes, far to near
     for (let i = DOMS.length - 1; i >= 0; i--) {
       const d = DOMS[i];
       const box = dominoBox(view, d);
       if (box.x1 < b.x0 - 50 || box.x0 > b.x1 + 50) continue;
-      blurred(ctx, box, sig(d.z), (c) => drawDomino(c, view, d), { sprite: true });
+      blurred(ctx, box, sig(d.z), (c) => drawDomino(c, view, d), { sharp: 0.6 });
       // the brass spinner catches the lamp: a small specular point, drawn as bokeh
       const sp = proj(view, [d.x - 0.5, -HCAM + DOM.h / 2 + 0.6, d.z - 0.5]);
       const dd = Math.hypot(discPx(d.z), px(0.02));

@@ -8,7 +8,7 @@ import vm from "node:vm";
 import { ROOT } from "./lib.mjs";
 
 // The page's classic scripts attach themselves to globalThis.FM.
-for (const f of ["src/clock.js", "src/sound.js"]) {
+for (const f of ["src/clock.js", "src/kit.js", "src/optics.js", "src/motion.js", "src/sound.js"]) {
   vm.runInThisContext(readFileSync(resolve(ROOT, f), "utf8"), { filename: f });
 }
 const SR = 48000;
@@ -16,7 +16,7 @@ if (process.argv.includes("--stems")) {
   const { music, fx, lufs } = globalThis.FM.sound.render(SR, { stems: true });
   const part = (b, a, z) => ({ L: b.L.subarray(a * SR, z * SR), R: b.R.subarray(a * SR, z * SR) });
   console.log(`music ${lufs(music).toFixed(1)} LUFS, effects ${lufs(fx).toFixed(1)} LUFS (whole film, before mastering)`);
-  for (const [a, z] of [[0, 7.5], [7.5, 32.5], [32.5, 50], [50, 62.5], [62.5, 75]]) {
+  for (const [a, z] of [[0, 10], [10, 22.5], [22.5, 42.5], [42.5, 57.5], [57.5, 72.5]]) {
     console.log(`  ${a}-${z} s: music ${lufs(part(music, a, z)).toFixed(1)}, effects ${lufs(part(fx, a, z)).toFixed(1)}`);
   }
   process.exit(0);

@@ -6,6 +6,7 @@
   const { T, cues, BEAT, DURATION, FPS } = FM.clock;
   const O = FM.optics;
   const SC = FM.scene;
+  const M = FM.motion;
 
   const W = 1920;
   const H = 1080;
@@ -127,17 +128,7 @@
 
   // ------------------------------------------------------------------ act A
 
-  // Focus is animated in lens extension (1/z), the aperture in stops.
-  const focusA = (t) =>
-    1 /
-    springTo(t, [
-      [0, 1 / O.FOCUS],
-      [T.rack1, 1 / O.ZS[0], SPR.card],
-      [T.rack2, 1 / O.ZS[7], SPR.card],
-      [T.rack3, 1 / O.FOCUS, SPR.card],
-    ]);
-  const stopA = (t) => springTo(t, [[0, 1], ...T.stopsA.map((tt, i) => [tt, 2 + i, SPR.snap])]);
-  const camA = (t) => ({ s: focusA(t), N: O.stopN(stopA(t)) });
+  const camA = (t) => ({ s: M.focusA(t), N: O.stopN(M.stopA(t)) });
 
   function actA(ctx, t) {
     const out = t < T.cone ? 0 : 1;
@@ -168,27 +159,9 @@
 
   // ------------------------------------------------------------------ act B
 
-  // The side view is schematic: a thin lens of focal length fd px, a point u px in front of it.
-  const B = { ax: 620, lx: 1040, la: 250, fd: 170, uF: 578, uNear: 391, uFar: 952 };
-  const vOf = (u) => (B.fd * u) / (u - B.fd);
-  B.xs = B.lx + vOf(B.uF);
+  const B = M.B;
   const PANEL = { x: 1400, y: B.ax - 135, w: 480, h: 270 };
-
-  const uB = (t) =>
-    springTo(t, [
-      [0, B.uF],
-      [T.nearer, B.uNear, SPR.card],
-      [T.farther, B.uFar, SPR.card],
-      [T.irisBOpen, B.uF, SPR.card],
-    ]);
-  const apB = (t) => springTo(t, [[0, 1], [T.irisB, 0.3, SPR.card], [T.irisBOpen, 1, SPR.card]]);
-  function opticsB(t) {
-    const u = uB(t);
-    const v = vOf(u);
-    const a = B.la * apB(t);
-    const vs = B.xs - B.lx;
-    return { u, v, a, xP: B.lx - u, xI: B.lx + v, disc: (2 * a * Math.abs(v - vs)) / v };
-  }
+  const { opticsB, apB } = M;
 
   // A lens as a biconvex outline centered at (x, y), half-height hh, center thickness th.
   function lensPath(ctx, x, y, hh, th) {
@@ -363,7 +336,7 @@
 
     // labels on the panel
     const lp = phase(t, T.domino, T.grid - 0.35, SPR.type, 0.3);
-    riseRuns(ctx, [{ s: "on the sensor" }], PANEL.x, PANEL.y - 30, { kind: "mono", size: 34, color: C.dim }, lp.in * (1 - zoomC), lp.out);
+    riseRuns(ctx, [{ s: "on the sensor" }], PANEL.x, PANEL.y - 30, { kind: "mono", size: 46, color: C.dim }, lp.in * (1 - zoomC), lp.out);
 
     // the side view
     if (leave < 0.999) {
@@ -400,10 +373,10 @@
         ctx.moveTo(x, ax + 134);
         ctx.lineTo(x, ax + 158);
         ctx.stroke();
-        font(ctx, "mono", 34);
+        font(ctx, "mono", 46);
         ctx.fillStyle = C.dim;
         ctx.textAlign = "center";
-        ctx.fillText("in focus", x, ax + 202);
+        ctx.fillText("in focus", x, ax + 212);
         ctx.restore();
       }
       // the domino and its light
@@ -520,7 +493,7 @@
     const pan = sp(t - (T.grid + 0.95), SPR.card);
     const x = lerp(lerp(PANEL.x + PANEL.w / 2, W / 2, z), W / 2 - 6 * PX, pan);
     const y = lerp(PANEL.y + PANEL.h / 2, H / 2, z);
-    return { x, y, pitch, alpha: clamp((t - T.grid - 0.1) / 0.45) };
+    return { x, y, pitch, alpha: clamp((t - T.grid - 0.05) / 0.3) };
   }
 
   // The three spots: a focused point, a disc smaller than a photosite, a bigger disc.
@@ -595,7 +568,7 @@
   const range = (lo, hi, o, p) => [Math.floor((lo - o) / p) - 1, Math.ceil((hi - o) / p) + 1];
 
   function drawPixels(ctx, fr, lit, alpha, bb) {
-    if (alpha <= 0.001 || fr.pitch < 9) return;
+    if (alpha <= 0.001 || fr.pitch < 5) return;
     const [i0, i1] = range(bb.x0, bb.x1, fr.x, fr.pitch);
     const [j0, j1] = range(bb.y0, bb.y1, fr.y, fr.pitch);
     const bayer = ["#271c21", "#1c2620", "#1c2620", "#1b2031"];
@@ -808,6 +781,13 @@
     const mosaicA = fr.alpha * (1 - bubGone);
     if (mosaicA > 0.001) {
       ctx.save();
+      const zc = sp(t - T.grid, SPR.card);
+      if (zc < 0.999) {
+        const pr = lerpRect(PANEL, FULL, zc);
+        ctx.beginPath();
+        ctx.rect(pr.x, pr.y, pr.w, pr.h);
+        ctx.clip();
+      }
       if (bub > 0.001) {
         ctx.beginPath();
         ctx.arc(cc[0], cc[1], clipR, 0, TAU);
@@ -868,7 +848,7 @@
     // labels under the specimens
     spots.forEach((s) => {
       const ph = phase(t, s.t + 0.15, T.grain - 0.25, SPR.type, 0.25);
-      riseRuns(ctx, [{ s: s.label }], s.x, H / 2 + 150, { kind: "mono", size: 40, color: C.ink }, ph.in, ph.out, "center");
+      riseRuns(ctx, [{ s: s.label }], s.x, H / 2 + 160, { kind: "mono", size: 52, color: C.ink }, ph.in, ph.out, "center");
     });
 
     // one photosite's width
@@ -877,11 +857,11 @@
       const x0 = fr.x - fr.pitch / 2;
       const y = fr.y - fr.pitch / 2 - 26;
       hdim(ctx, x0 + 3, x0 + fr.pitch - 3, y, C.ink, clamp(pw.in * 1.3) * (1 - pw.out), 2.5);
-      chip(ctx, "6 µm", x0 + fr.pitch / 2, y - 52, pw.in, pw.out, { size: 44, align: "center", fill: C.ink });
+      chip(ctx, "6 µm", x0 + fr.pitch / 2, y - 56, pw.in, pw.out, { size: 52, align: "center", fill: C.ink });
     }
     // the cones' spacing, in the magnifier
     const cs = phase(t, T.eye + 0.5, T.print - 0.15, SPR.ui, 0.25);
-    chip(ctx, "2.5 µm apart", BUB.x, BUB.y + BUB.r + 50, cs.in, cs.out, { size: 40, align: "center", fill: C.ink });
+    chip(ctx, "2.5 µm apart", BUB.x - 60, BUB.y + BUB.r + 56, cs.in, cs.out, { size: 48, align: "center", fill: C.ink });
 
     // captions
     const base = { kind: "serif", size: 84, color: C.ink };
@@ -996,12 +976,12 @@
       const sizeA = o * clamp(pp * 1.4);
       ctx.save();
       ctx.globalAlpha = sizeA;
-      font(ctx, "mono", 40);
+      font(ctx, "mono", 50);
       ctx.fillStyle = C.ink;
       ctx.textAlign = "center";
       const label = shrink < 0.5 ? "15 cm print" : "36 mm sensor";
       ctx.globalAlpha = sizeA * (1 - dive);
-      ctx.fillText(label, pcx, pcy + pr.h / 2 + 56);
+      ctx.fillText(label, pcx, pcy + pr.h / 2 + 64);
       ctx.globalAlpha = sizeA;
       if (fwd > 0.05) {
         // a leader from the dot to its size, outside the picture
@@ -1025,10 +1005,10 @@
       if (dm.in > 0.001) {
         ctx.save();
         ctx.globalAlpha = clamp(dm.in * 1.3) * (1 - dm.out) * o;
-        font(ctx, "mono", 40);
+        font(ctx, "mono", 50);
         ctx.fillStyle = C.ink;
         ctx.textAlign = "center";
-        ctx.fillText("40 cm", (pcx + nx) / 2, 858);
+        ctx.fillText("40 cm", (pcx + nx) / 2, 854);
         ctx.restore();
       }
     }
@@ -1039,14 +1019,14 @@
     const big = phase(t, T.arcmin + 0.15, T.print - 0.15, SPR.type, 0.3);
     riseRuns(ctx, [{ s: "1′", color: C.accent }], 150, 520, { kind: "serif", size: 300, color: C.ink }, big.in, big.out);
     const cap2 = phase(t, T.arcmin + 0.625, T.print - 0.15, SPR.type, 0.3);
-    riseRuns(ctx, [{ s: "one arcminute, 1/60°" }], 150, 620, { kind: "mono", size: 44, color: C.ink }, cap2.in, cap2.out);
+    riseRuns(ctx, [{ s: "one arcminute, 1/60°" }], 150, 630, { kind: "mono", size: 52, color: C.ink }, cap2.in, cap2.out);
     const base = { kind: "serif", size: 84, color: C.ink };
     const l1 = phase(t, T.print + 0.1, T.shrink + 1.1, SPR.type, 0.25);
     riseRuns(ctx, [{ s: "At 40 cm, 1′ spans " }, { s: "0.12 mm", color: C.accent }, { s: " of a print." }], 150, 190, base, l1.in, l1.out);
     const l2 = phase(t, T.shrink + 1.35, T.coc - 0.3, SPR.type, 0.25);
     riseRuns(ctx, [{ s: "On the sensor, that is " }, { s: "0.03 mm", color: C.accent }, { s: "." }], 150, 190, base, l2.in, l2.out);
     const l3 = phase(t, T.shrink + 1.6, T.coc - 0.3, SPR.type, 0.25);
-    riseRuns(ctx, [{ s: "The print is 4.2 times the sensor." }], 150, 280, { kind: "mono", size: 40, color: C.dim }, l3.in, l3.out);
+    riseRuns(ctx, [{ s: "The print is 4.2 times the sensor." }], 150, 290, { kind: "mono", size: 50, color: C.dim }, l3.in, l3.out);
   }
 
   // The circle of confusion on the sensor: five photosites across.
@@ -1074,10 +1054,10 @@
     if (five.in > 0.001) {
       ctx.save();
       ctx.globalAlpha = clamp(five.in * 1.3) * (1 - five.out);
-      font(ctx, "mono", 40);
+      font(ctx, "mono", 50);
       ctx.fillStyle = C.ink;
       ctx.textAlign = "left";
-      ctx.fillText("5 photosites", fr.x + R.r + 40, fr.y + 14);
+      ctx.fillText("5 photosites", fr.x + R.r + 40, fr.y + 16);
       ctx.restore();
     }
     const base = { kind: "serif", size: 84, color: C.ink };
@@ -1094,8 +1074,7 @@
   const CH = { z0: 690, z1: 950, x0: 160, x1: 1760, axis: 860, discY: 560, k: 1200 };
   const chX = (z) => CH.x0 + ((z - CH.z0) * (CH.x1 - CH.x0)) / (CH.z1 - CH.z0);
   const PIPS_ICON = SC.DOMS.map((d) => d.pips);
-  const stopD = (t) => springTo(t, [[0, 1], ...T.stopsD.map((tt, i) => [tt, 2 + i, SPR.snap])]);
-  const ND = (t) => O.stopN(stopD(t));
+  const ND = (t) => O.stopN(M.stopD(t));
 
   const PIP_LAYOUT = {
     0: [],
@@ -1148,7 +1127,7 @@
     ctx.moveTo(CH.x0, CH.axis);
     ctx.lineTo(lerp(CH.x0, CH.x1, ap), CH.axis);
     ctx.stroke();
-    font(ctx, "mono", 36);
+    font(ctx, "mono", 42);
     ctx.textAlign = "center";
     for (let z = 700; z <= 950; z += 50) {
       const x = chX(z);
@@ -1157,11 +1136,11 @@
       ctx.globalAlpha = (1 - gone) * a;
       ctx.fillStyle = C.dim;
       ctx.fillRect(x - 1, CH.axis + 8, 2, 14);
-      ctx.fillText(String(z / 10), x, CH.axis + 62);
+      ctx.fillText(String(z / 10), x, CH.axis + 66);
     }
     ctx.globalAlpha = 1 - gone;
     const ul = phase(t, T.chart + 0.6, Infinity, SPR.type);
-    riseRuns(ctx, [{ s: "cm from the lens" }], CH.x1, CH.axis + 112, { kind: "mono", size: 36, color: C.dim }, ul.in, 0, "right");
+    riseRuns(ctx, [{ s: "cm from the lens" }], CH.x1, CH.axis + 120, { kind: "mono", size: 42, color: C.dim }, ul.in, 0, "right");
 
     const band = sp(t - T.band, SPR.ui);
     if (band > 0.001) {
@@ -1214,10 +1193,10 @@
     // light and depth
     const lv = [[T.chart + 0.7, "1"], ...T.stopsD.map((tt, i) => [tt, "1/" + Math.pow(2, i + 1)])];
     const lb = phase(t, T.chart + 0.6, Infinity, SPR.type);
-    riseRuns(ctx, [{ s: "light" }], 1290, 130, { kind: "mono", size: 36, color: C.dim }, lb.in, 0, "right");
+    riseRuns(ctx, [{ s: "light" }], 1290, 128, { kind: "mono", size: 48, color: C.dim }, lb.in, 0, "right");
     flipLabel(ctx, t, lv, 1290, 250, { kind: "serif", size: 110, color: C.ink }, (v) => [{ s: v }], "right");
     const db = phase(t, T.band, Infinity, SPR.type);
-    riseRuns(ctx, [{ s: "depth of field" }], 1770, 130, { kind: "mono", size: 36, color: C.accent }, db.in, 0, "right");
+    riseRuns(ctx, [{ s: "depth of field" }], 1770, 128, { kind: "mono", size: 48, color: C.accent }, db.in, 0, "right");
     if (db.in > 0.001) {
       K.masked(ctx, 1380, 1800, 250, 110, 40, db.in, 0, () => {
         const cm = (zf - zn) / 10;
@@ -1339,9 +1318,9 @@
       ctx.stroke();
       ctx.restore();
       const lb = phase(t, T.inset + 0.3, T.close - 0.1, SPR.type, 0.3);
-      const mono = { kind: "mono", size: 38, color: C.ink };
-      riseRuns(ctx, [{ s: "blur " }, { s: `${c.toFixed(3)} mm` }], 1470, 566, mono, lb.in, lb.out);
-      riseRuns(ctx, [{ s: "limit " }, { s: "0.030 mm", color: C.accent }], 1470, 618, { ...mono, color: C.dim }, lb.in, lb.out);
+      const mono = { kind: "mono", size: 46, color: C.ink };
+      riseRuns(ctx, [{ s: "blur " }, { s: `${c.toFixed(3)} mm` }], 1460, 572, mono, lb.in, lb.out);
+      riseRuns(ctx, [{ s: "limit " }, { s: "0.030 mm", color: C.accent }], 1460, 632, { ...mono, color: C.dim }, lb.in, lb.out);
     }
 
     // the iris: opening on the picture, closing on the lockup

@@ -2,10 +2,10 @@
 // four motion-blur subframes), and the frames are piped in order to ffmpeg, which encodes
 // H.264 (yuv420p, CRF 16) and muxes the soundtrack.
 //
-//   node tools/render.mjs                        full film -> out/four-millimeters.mp4
+//   node tools/render.mjs                        full film -> out/one-arcminute.mp4
 //   node tools/render.mjs --from 0 --to 600      a frame range (end exclusive), for tests
 //   node tools/render.mjs --scale 0.5 --crf 24   a quick half-size preview
-//   node tools/render.mjs --res 2 --out out/four-millimeters-4k.mp4   native 3840 x 2160
+//   node tools/render.mjs --res 2 --out out/one-arcminute-4k.mp4   native 3840 x 2160
 //   options: --audio out/soundtrack.wav  --out <file>  --workers 4  --fps 60  --no-blur  --silent
 
 import { spawn } from "node:child_process";
@@ -15,7 +15,7 @@ import { pathToFileURL } from "node:url";
 import { launch, option, ROOT } from "./lib.mjs";
 
 const args = process.argv.slice(2);
-const out = resolve(ROOT, option(args, "out", "out/four-millimeters.mp4"));
+const out = resolve(ROOT, option(args, "out", "out/one-arcminute.mp4"));
 const audioPath = resolve(ROOT, option(args, "audio", "out/soundtrack.wav"));
 const workers = Number(option(args, "workers", 4));
 const crf = option(args, "crf", "16");

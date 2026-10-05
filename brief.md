@@ -71,7 +71,7 @@ The receivers:
 Two worlds, as in Four Millimeters.
 The diagram world is ink on near-black, drawn like a technical plate: hairline rays, a tinted cone of light, dimension lines with arrowheads.
 The picture world is a photograph made in code: a row of ivory dominoes on a black lacquered table, in front of a tall window over a city at night.
-The city lights become bokeh discs, the dominoes and their reflections blur by distance, and a domino lying flat in the foreground stays soft even at f/16.
+The city lights become bokeh discs, and the dominoes and their reflections blur by distance. The city is at infinity, beyond the sharp zone, so it stays soft even at f/16.
 
 Palette, diagram:
 
@@ -126,30 +126,35 @@ Every state change lands on a beat. Hero reveals land on a downbeat.
 
 ### C. The limit, 0:22.5–0:42.5
 
-- 22.50 The panel fills the screen: the sensor surface, a grid of photosites. "6 µm".
+- 22.50 The panel grows to fill the screen, and its surface turns out to be a grid of photosites. "6 µm" over one of them.
 - 23.75 A focused point lands in one photosite; it lights.
-- 25.00 A small disc lands in the same photosite; it lights the same. "Smaller than a pixel, a disc is a point."
-- 26.25 A larger disc spreads over a patch of photosites: now it shows.
-- 27.50 The cells crack into film grains. "Film: grains of silver." Faster film, bigger grains.
-- 30.00 The grains pack into the cone mosaic of a retina. "Your eye: cones." Pull back to a section of the eye.
-- 32.50 Hero: the eye's limit. "1′", one sixtieth of a degree.
-- 33.75 The eye looks at a print 40 cm away; an orange wedge of 1′ lands on it as a dot 0.12 mm wide.
-- 36.25 The print shrinks to the sensor, 4.2 times smaller, and the dot becomes 0.03 mm.
-- 38.75 Into the sensor again: the orange ring of 0.03 mm covers five photosites. "Blur smaller than this looks sharp." "circle of confusion".
+- 25.00 A disc smaller than a photosite lands in another; it lights exactly the same. "A smaller disc lights it the same."
+- 26.25 A bigger disc spreads over a patch of photosites, each dimmer. "Only a bigger one shows."
+- 27.50 The photosites give way to flakes of silver halide. "Film: grains of silver."
+- 28.75 The grains grow. "Faster film, bigger grains."
+- 30.00 The grains give way to the jittered hexagons of a cone mosaic. "Your eye: a mosaic of cones."
+- 31.25 The mosaic shrinks into a magnifier pinned to the fovea of an eye in section. "2.5 µm apart".
+- 32.50 Hero: "The finest detail it can see:" "1′", one arcminute, 1/60°. An orange wedge opens from two cones through the eye's lens.
+- 33.75 The wedge reaches a print 40 cm away. "At 40 cm, 1′ spans 0.12 mm of a print."
+- 36.25 The eye leaves; the print comes forward with its orange dot.
+- 37.50 The print shrinks 4.2 times to the sensor that made it. "On the sensor, that is 0.03 mm."
+- 38.35 Into the sensor along the dot, until it is a ring five photosites across. "Blur smaller than this looks sharp."
+- 40.00 "the circle of confusion"
 
 ### D. The zone, 0:42.5–0:57.5
 
-- 42.50 The ring pulls back into a chart: the eight dominoes stand on a distance axis, each with its blur disc at f/1.4 above it and an orange ring for the limit.
-- 45.00 Only the third fits its ring. An orange band on the axis marks the depth of field: 2.0 cm.
-- 47.50 The aperture closes one stop per beat to f/16. Every disc shrinks by √2 per stop. A domino lights with a wooden clack when its disc fits the ring. The band and its readout grow to 23.5 cm. At the right, a front-view iris closes and a light readout halves each stop.
-- 52.50 "1/128 the light." "2 cm → 23.5 cm of depth."
-- 55.00 "The aperture sets both."
+- 42.50 The ring travels into a chart: the eight dominoes stand on a distance axis in centimeters, each with its blur disc at f/1.4 above it, drawn 1200 times life size, and an orange ring for the limit. "f/1.4", a front view of the iris, and "light 1" at the top.
+- 45.00 Only the fourth fits its ring. An orange band on the axis marks the depth of field: 2.0 cm. "Inside the ring, it looks sharp."
+- 47.50 The aperture closes one stop per beat to f/16. Every disc shrinks by √2 per stop. A domino lights with a wooden clack when its disc fits the ring. The band and its readout grow to 23.5 cm. The iris closes and the light halves each stop, to 1/128.
+- 52.50 "1/128 the light. About 12 times the depth."
+- 55.00 "The aperture sets the light and the blur."
 
 ### E. The answer, 0:57.5–1:12.5
 
-- 57.50 The iris at the right grows to fill the frame and opens on the picture at f/16.
-- 60.00 "One distance is in focus." A thin orange tick on the third domino.
-- 62.50 "The rest blur less than you can see." The farthest domino's pip opens in an inset: a disc just inside the ring.
+- 57.50 The chart's iris grows to fill the frame and opens on the picture at f/16.
+- 60.00 "One distance is in focus." A small orange marker over the fourth domino.
+- 62.50 "The rest blur less than you can see."
+- 63.75 A magnifier on the farthest domino's pip: its blur disc, 0.026 mm, inside the 0.030 mm ring.
 - 67.50 The iris closes. Lockup: "Depth of field is the blur you can't see."
 
 ## Motion
