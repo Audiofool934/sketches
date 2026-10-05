@@ -9,7 +9,7 @@ The aperture sets the width of the cone of light, so it sets how fast the disc g
 
 It is the second film in the series after [Four Millimeters](https://github.com/Audiofool934/sketches/tree/piece/four-millimeters), with the same type, ink and accent.
 The picture and the sound are both made from code.
-The finished film is [`one-arcminute.mp4`](one-arcminute.mp4) in this folder (1920 × 1080, 60 fps, stereo AAC), with a native 4K version in [`one-arcminute-4k.mp4`](one-arcminute-4k.mp4) (3840 × 2160, 60 fps).
+The finished film is [`one-arcminute.mp4`](one-arcminute.mp4) in this folder (1920 × 1080, 60 fps, stereo AAC), with a native 4K version in [`one-arcminute-4k.mp4`](one-arcminute-4k.mp4) (3840 × 2160, 60 fps, 41 MB). Both are stored with Git LFS.
 
 ## What it shows
 
@@ -64,6 +64,7 @@ node tools/render.mjs     # picture and sound -> out/one-arcminute.mp4
 node tools/render.mjs --res 2 --preset medium --out out/one-arcminute-4k.mp4   # native 3840 x 2160
 ```
 
+Rendering takes about five minutes at 1080p and a quarter of an hour at 4K on four cores; the soundtrack takes a few seconds.
 Every frame and every sample come out the same each time.
 
 Other tools:
