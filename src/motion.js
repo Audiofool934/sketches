@@ -19,6 +19,9 @@
     ]);
   // The aperture, in stops (1 = f/1.4, 8 = f/16), clicking down in part A and again in part D.
   const stopA = (t) => springTo(t, [[0, 1], ...T.stopsA.map((tt, i) => [tt, 2 + i, SPR.snap])]);
+  // The aperture seen from the front in part B: clicks down a stop a beat, then opens again.
+  const stopAp = (t) =>
+    springTo(t, [[0, 8], [T.apOpen, 1, SPR.long], ...T.apStops.map((tt, i) => [tt, 2 + i, SPR.snap]), [T.apSecond, 1, SPR.long]]);
   const stopD = (t) =>
     springTo(t, [
       [0, 1],
@@ -78,10 +81,10 @@
 
   // What the part D readouts show: each click on its cue, then the swing's crossings.
   const marksD = () => [
-    [T.chart + 0.3, 1],
+    [T.chart + 0.8, 1],
     ...T.stopsD.map((tt, i) => [tt, 2 + i]),
     ...stopMarks(stopD, T.sweepOpen - 0.01, T.answer).slice(1),
   ];
 
-  FM.motion = { focusA, stopA, stopD, B, vOf, uB, apB, opticsB, crossings, stopMarks, marksD };
+  FM.motion = { focusA, stopA, stopAp, stopD, B, vOf, uB, apB, opticsB, crossings, stopMarks, marksD };
 })();

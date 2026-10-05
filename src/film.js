@@ -26,13 +26,19 @@
 
   // The photograph in rect r. The lens axis (and the horizon) sits at 39% of the height,
   // as with a shifted lens, so the camera stays level and the dominoes stay upright.
-  function picture(ctx, r, cam) {
+  // zoom: {z, fx, fy} magnifies the picture z times about the screen point (fx, fy).
+  function picture(ctx, r, cam, zoom) {
     ctx.save();
     ctx.beginPath();
     ctx.rect(r.x, r.y, r.w, r.h);
     ctx.clip();
     const S = r.w / 36;
     const view = { cx: r.x + r.w / 2, cy: r.y + r.h * 0.39, S };
+    if (zoom && zoom.z !== 1) {
+      view.S *= zoom.z;
+      view.cx = zoom.fx + (view.cx - zoom.fx) * zoom.z;
+      view.cy = zoom.fy + (view.cy - zoom.fy) * zoom.z;
+    }
     SC.draw(ctx, view, cam, { x0: r.x, y0: r.y, x1: r.x + r.w, y1: r.y + r.h });
     ctx.restore();
     return view;
@@ -125,29 +131,175 @@
     riseRuns(ctx, make(values[cur][1]), x, y, base, e, out, align);
   }
 
+  // Captions: [tIn, tOut, parts, line] each, rising in through a mask and leaving upward.
+  // line 1 sits under line 0, so a thought can take two lines.
+  function captions(ctx, t, lines, x = 150, y = 190, base = { kind: "serif", size: 84, color: C.ink }) {
+    for (const [a, b, parts, line = 0] of lines) {
+      if (t < a - 0.01 || t > b + 0.4) continue;
+      const ph = phase(t, a + 0.05, b - 0.2, SPR.type, 0.3);
+      riseRuns(ctx, parts, x, y + line * base.size * 1.22, base, ph.in, ph.out);
+    }
+  }
+  const it = (s) => ({ s, italic: true });
+  const ac = (s) => ({ s, color: C.accent });
+
   // ------------------------------------------------------------------ act A
 
   const camA = (t) => ({ s: M.focusA(t), N: O.stopN(M.stopA(t)) });
 
   function actA(ctx, t) {
-    const out = t < T.cone ? 0 : 1;
-    if (!out) picture(ctx, FULL, camA(t));
+    picture(ctx, FULL, camA(t));
 
     // the iris opens
     if (t < 0.9) {
       const r = 1250 * sp(t - 0.04, [110, 2 * Math.sqrt(110)]);
       iris(ctx, r, 0.4 + r * 0.0007);
     }
+    captions(ctx, t, [
+      [T.headA, T.stopsA[0] - 0.4, [{ s: "A lens focuses at " }, it("one"), { s: " distance." }]],
+      [T.headA + 1.25, T.stopsA[0] - 0.4, [{ s: "Everything nearer or farther is soft." }], 1],
+      [T.why, T.apIntro - 0.3, [{ s: "So why do all eight look " }, it("sharp?")]],
+    ], 150, 945, { kind: "serif", size: 76, color: C.ink });
+  }
 
-    // the f-number
+  // The f-number, top left, from the opening shot through the aperture scene.
+  function fNumber(ctx, t) {
+    if (t > T.turn + 0.5) return;
     const fv = [[T.fLabel, "1.4"], ...T.stopsA.map((tt, i) => [tt, O.LABELS[2 + i]])];
-    flipLabel(ctx, t, fv, 150, 215, { kind: "serif", size: 150, color: C.ink }, (s) => [{ s: "f/", italic: true }, { s }], "left", 0.24, T.cone - 0.3);
+    for (const [tt, k] of M.stopMarks(M.stopAp, T.apIntro + 1, T.turn).slice(1)) fv.push([tt, O.LABELS[k]]);
+    // the scene's own clicks land exactly on their cues
+    const clean = fv.filter(([tt]) => !(tt > T.apStops[0] - 0.05 && tt < T.apStops[6] + 0.3));
+    T.apStops.forEach((tt, i) => clean.push([tt, O.LABELS[2 + i]]));
+    clean.sort((a, b) => a[0] - b[0]);
+    flipLabel(ctx, t, clean, 150, 215, { kind: "serif", size: 150, color: C.ink }, (v) => [it("f/"), { s: v }], "left", 0.24, T.turn - 0.3);
+  }
 
-    const base = { kind: "serif", size: 92, color: C.ink };
-    const h1 = phase(t, T.headA, T.stopsA[0] - 0.2);
-    riseRuns(ctx, [{ s: "A lens focuses at " }, { s: "one", italic: true }, { s: " distance." }], 150, 330, base, h1.in, h1.out);
-    const w1 = phase(t, T.why, T.cone - 0.3);
-    riseRuns(ctx, [{ s: "So why are all eight " }, { s: "sharp?", italic: true }], 150, 330, base, w1.in, w1.out);
+  // ------------------------------------------------------------------ act AP: the aperture
+
+  const LENS = { x: 1360, y: 600, ring: 300, inner: 266, open: 250 };
+
+  function actAp(ctx, t) {
+    const N = O.stopN(M.stopAp(t));
+    // 1. the iris closes over the picture; 2. we pull back to see it is inside a lens
+    const close = ease.inOutCubic(clamp((t - T.apIntro) / 0.9));
+    const pull = sp(t - (T.apIntro + 0.8), [26, 2 * Math.sqrt(26)]);
+    const Z0 = 6;
+    const z = lerp(Z0, 1, pull);
+    const turnP = t < T.turn ? 0 : ease.inOutCubic(clamp((t - T.turn) / 0.9));
+    if (turnP >= 0.999) return;
+    // during the turn the lens slides to where the side view's lens will stand
+    const slide = ease.inOutCubic(clamp((t - (T.apSecond + 1.25)) / 1.2));
+    const lx = lerp(LENS.x, M.B.lx, slide);
+    const ly = lerp(LENS.y, M.B.ax, slide);
+    const cx = lerp(W / 2, LENS.x, pull) + (lx - LENS.x);
+    const cy = lerp(H / 2, LENS.y, pull) + (ly - LENS.y);
+    const rOpen = LENS.open * (Math.SQRT2 / N);
+    const r = lerp(1250, rOpen * Z0, close) * (z / Z0) * (close < 1 ? 1 : 1);
+
+    // light through the opening: the picture, dimmer by half each stop once it opens wide
+    const lightK = t < T.apOpen ? 1 : Math.pow(2, -(M.stopAp(t) - 1));
+    const sx = 1 - turnP * 0.94;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(sx, 1);
+    ctx.translate(-cx, -cy);
+    // the lens body around the barrel
+    if (pull > 0.001) {
+      ctx.save();
+      ctx.globalAlpha = clamp(pull * 2);
+      ctx.fillStyle = "#11141b";
+      ctx.beginPath();
+      ctx.arc(cx, cy, LENS.ring * z, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(r, 0.5), 0, TAU);
+    ctx.clip();
+    picture(ctx, FULL, { s: O.FOCUS, N: 16 });
+    ctx.fillStyle = `rgba(4,5,8,${(1 - Math.pow(lightK, 0.45)).toFixed(3)})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, LENS.inner * z, 0, TAU);
+    ctx.clip();
+    iris(ctx, r, 0.4 + r * 0.0007, cx, cy);
+    ctx.restore();
+    if (pull > 0.001) {
+      ctx.save();
+      ctx.globalAlpha = clamp(pull * 2);
+      ctx.strokeStyle = C.ink;
+      ctx.lineWidth = 3;
+      for (const rr of [LENS.ring, LENS.inner]) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, rr * z, 0, TAU);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+    // outside the barrel, before the pull: blades to the frame's edge
+    if (pull < 0.001 && close < 1) {
+      // covered by the iris already
+    }
+
+    // the opening's width, and the light that gets through
+    const wv = phase(t, T.apStops[0] - 0.4, T.apSecond - 0.2, SPR.ui, 0.3);
+    if (wv.in > 0.001 && turnP <= 0) {
+      const y = LENS.y - LENS.ring - 100;
+      hdim(ctx, cx - rOpen, cx + rOpen, y + 40, C.ink, clamp(wv.in * 1.4) * (1 - wv.out));
+      ctx.save();
+      ctx.globalAlpha = clamp(wv.in * 1.4) * (1 - wv.out);
+      font(ctx, "mono", 48);
+      ctx.fillStyle = C.ink;
+      ctx.textAlign = "center";
+      const mm = 50 / N;
+      ctx.fillText(`opening ${mm < 10 ? mm.toFixed(1) : mm.toFixed(0)} mm`, cx, y);
+      ctx.restore();
+    }
+    const lv = phase(t, T.apLight, T.apSecond - 0.2, SPR.type, 0.3);
+    if (lv.in > 0.001) {
+      const lab = Math.round(M.stopAp(t));
+      riseRuns(ctx, [{ s: "light" }], 150, 720, { kind: "mono", size: 54, color: C.dim }, lv.in, lv.out);
+      riseRuns(ctx, [{ s: lab <= 1 ? "1" : "1/" + Math.pow(2, lab - 1) }], 150, 850, { kind: "serif", size: 130, color: C.ink }, lv.in, lv.out);
+    }
+    // name it
+    const nm = phase(t, T.apName + 0.3, T.apOpen - 0.2, SPR.ui, 0.3);
+    if (nm.in > 0.001) {
+      ctx.save();
+      ctx.globalAlpha = clamp(nm.in * 1.4) * (1 - nm.out);
+      ctx.strokeStyle = C.ink;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + rOpen * 0.7, cy - rOpen * 0.7);
+      ctx.lineTo(1640, 250);
+      ctx.lineTo(1690, 250);
+      ctx.stroke();
+      ctx.restore();
+      riseRuns(ctx, [{ s: "aperture" }], 1650, 220, { kind: "mono", size: 54, color: C.ink }, nm.in, nm.out, "center");
+    }
+
+    const mono = { kind: "mono", size: 44, color: C.dim };
+    captions(ctx, t, [
+      [T.apName, T.apOpen, [{ s: "This is the " }, it("aperture"), { s: ":" }]],
+      [T.apName + 0.625, T.apOpen, [{ s: "an opening in the lens." }], 1],
+      [T.apOpen, T.apStops[0], [{ s: "The f-number says how wide it is." }]],
+      [T.apOpen + 0.625, T.apStops[0], [{ s: "f/1.4 is wide open." }], 1],
+      [T.apStops[0], T.apLight, [{ s: "A bigger number," }]],
+      [T.apStops[0] + 0.625, T.apLight, [it("a smaller opening.")], 1],
+      [T.apLight, T.apHold, [{ s: "Each stop lets in" }]],
+      [T.apLight + 0.625, T.apHold, [{ s: "half as much light." }], 1],
+      [T.apHold, T.apSecond, [{ s: "f/16 lets in 1/128" }]],
+      [T.apHold + 0.625, T.apSecond, [{ s: "of the light at f/1.4." }], 1],
+      [T.apSecond, T.turn + 0.6, [{ s: "But the aperture does" }]],
+      [T.apSecond + 0.625, T.turn + 0.6, [{ s: "a " }, it("second"), { s: " thing." }], 1],
+    ], 150, 420);
+    captions(ctx, t, [
+      [T.apStops[0] + 1.25, T.apHold, [{ s: "f-number = focal length ÷ opening" }]],
+      [T.apHold + 0.5, T.apSecond, [{ s: "(The opening shot held its brightness with a longer exposure.)" }]],
+    ], 150, 1010, mono);
   }
 
   // ------------------------------------------------------------------ act B
@@ -303,59 +455,95 @@
     ctx.restore();
   }
 
+  // The panel shows the sensor's view: one dot, a disc, or (as the bridge) the photograph
+  // itself, magnified around the farthest domino's pip at the same aperture.
+  function bridgePicture(ctx, r, t) {
+    const d8 = SC.DOMS[7];
+    const N = Math.SQRT2 / apB(t);
+    const z = 4.8; // the pip's blur disc comes out about the size of the schematic disc
+    const full = { cx: W / 2, cy: H * 0.39, S: W / 36 };
+    const pip = SC.proj(full, [d8.x + 6.4, -SC.HCAM + 48 - 12 + 6.4, d8.z]);
+    const pcx = r.x + r.w / 2;
+    const pcy = r.y + r.h / 2;
+    const view = { S: full.S * z, cx: pcx + (full.cx - pip[0]) * z, cy: pcy + (full.cy - pip[1]) * z };
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(r.x, r.y, r.w, r.h);
+    ctx.clip();
+    SC.draw(ctx, view, { s: O.FOCUS, N }, { x0: r.x, y0: r.y, x1: r.x + r.w, y1: r.y + r.h });
+    ctx.restore();
+  }
+
   function actB(ctx, t) {
     const o = opticsB(t);
     const ax = B.ax;
     const leave = t < T.grid - 0.35 ? 0 : ease.inCubic(clamp((t - (T.grid - 0.35)) / 0.5));
-    const pIn = sp(t - T.cone, SPR.card);
+    const turnP = ease.inOutCubic(clamp((t - T.turn) / 0.9));
 
-    // the picture shrinks into the panel, then gives way to the sensor's view of one point
+    // the sensor's view
     const zoomC = t < T.grid ? 0 : sp(t - T.grid, SPR.card);
-    const r = lerpRect(lerpRect(FULL, PANEL, pIn), FULL, zoomC);
-    if (zoomC < 0.999) {
-      const dark = ease.inOutCubic(clamp((t - T.burst) / 0.9));
-      if (dark < 0.999) picture(ctx, r, { s: O.FOCUS, N: 16 });
+    const r = lerpRect(PANEL, FULL, zoomC);
+    const panelIn = sp(t - (T.turn + 0.6), SPR.card);
+    if (zoomC < 0.999 && panelIn > 0.001) {
       ctx.save();
+      ctx.globalAlpha = clamp(panelIn * 1.4);
       ctx.fillStyle = "#07090e";
-      ctx.globalAlpha = dark;
       ctx.fillRect(r.x, r.y, r.w, r.h);
+      // the bridge: the photograph's own blur, in place of the schematic disc
+      const br = phase(t, T.bridge, T.irisBOpen + 0.6, SPR.card, 0.5);
+      if (br.in > 0.001) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(r.x, r.y, r.w, r.h);
+        ctx.clip();
+        ctx.globalAlpha *= clamp(br.in * 1.2) * (1 - br.out);
+        bridgePicture(ctx, r, t);
+        ctx.restore();
+      }
       ctx.restore();
     }
     const sc = r.w / PANEL.w;
     const cx = r.x + r.w / 2;
     const cy = r.y + r.h / 2;
-    const spotOn = clamp((t - (T.fold + 0.35)) / 0.25) * (1 - clamp((t - (T.grid + 0.35)) / 0.3));
-    spot(ctx, cx, cy, o.disc * sc, 1.414 / apB(t), spotOn);
-
-    // labels on the panel
-    const lp = phase(t, T.domino, T.grid - 0.35, SPR.type, 0.3);
-    riseRuns(ctx, [{ s: "on the sensor" }], PANEL.x, PANEL.y - 30, { kind: "mono", size: 46, color: C.dim }, lp.in * (1 - zoomC), lp.out);
+    const spotOn = clamp((t - (T.inFocusB - 0.2)) / 0.3) * (1 - clamp((t - (T.grid + 0.35)) / 0.3));
+    const brHide = phase(t, T.bridge, T.irisBOpen + 0.6, SPR.card, 0.5);
+    spot(ctx, cx, cy, o.disc * sc, 1.414 / apB(t), spotOn * (1 - clamp(brHide.in * 1.3) * (1 - brHide.out)));
+    const lp = phase(t, T.turn + 0.8, T.grid - 0.35, SPR.type, 0.3);
+    const ptxt = t >= T.bridge && t < T.irisBOpen + 0.3 ? "photo, magnified" : "on the sensor";
+    riseRuns(ctx, [{ s: ptxt }], PANEL.x, PANEL.y - 30, { kind: "mono", size: 46, color: C.dim }, lp.in * (1 - zoomC), lp.out);
 
     // the side view
     if (leave < 0.999) {
       ctx.save();
       ctx.translate(-leave * 900, 0);
       ctx.globalAlpha = 1 - leave;
-      const ap = clamp((t - T.cone - 0.1) / 0.5);
-      // axis
+      const ap = clamp((t - T.turn - 0.4) / 0.6);
       ctx.strokeStyle = C.rule;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(60, ax);
       ctx.lineTo(lerp(60, B.xs, ease.outCubic(ap)), ax);
       ctx.stroke();
-      // lens and sensor
-      const lensP = sp(t - (T.cone + 0.15), SPR.card);
-      drawLens(ctx, B.lx, ax, 250 * lerp(0.6, 1, lensP), lensP);
-      irisSide(ctx, B.lx, ax, o.a, B.la, 1);
-      const sensP = sp(t - (T.cone + 0.3), SPR.card);
+      // the lens: the front view turned edge-on becomes this
+      drawLens(ctx, B.lx, ax, 250, clamp((turnP - 0.5) * 2));
+      if (turnP > 0.5) irisSide(ctx, B.lx, ax, o.a, B.la, clamp((turnP - 0.5) * 2));
+      const sensP = sp(t - (T.turn + 0.5), SPR.card);
       if (sensP > 0.001) {
         ctx.fillStyle = C.ink;
         const sh = 170 * sensP;
         ctx.fillRect(B.xs - 4, ax - sh, 8, sh * 2);
+        const sl = phase(t, T.turn + 0.9, T.domino + 1.2, SPR.type, 0.3);
+        riseRuns(ctx, [{ s: "sensor" }], B.xs, ax + 236, { kind: "mono", size: 46, color: C.dim }, sl.in, sl.out, "center");
+        riseRuns(ctx, [{ s: "lens" }], B.lx, ax + 316, { kind: "mono", size: 46, color: C.dim }, sl.in, sl.out, "center");
+      }
+      // the aperture is the base of the cone
+      const apl = phase(t, T.cone + 0.9, T.fold, SPR.ui, 0.3);
+      if (apl.in > 0.001) {
+        vdim(ctx, B.lx - 40, ax - o.a, ax + o.a, C.ink, clamp(apl.in * 1.4) * (1 - apl.out));
+        riseRuns(ctx, [{ s: "aperture" }], B.lx - 64, ax - o.a - 26, { kind: "mono", size: 46, color: C.ink }, apl.in, apl.out, "right");
       }
       // the focus mark on the axis
-      const fm = phase(t, T.fold + 0.6, T.grid - 0.4, SPR.ui, 0.3);
+      const fm = phase(t, T.inFocusB + 0.3, T.grid - 0.4, SPR.ui, 0.3);
       if (fm.in > 0.001) {
         const x = B.lx - B.uF;
         ctx.save();
@@ -375,12 +563,12 @@
       // the domino and its light
       const dp = sp(t - T.domino, SPR.card);
       dominoSide(ctx, o.xP - (1 - dp) * 60, ax, clamp(dp * 1.4));
-      if (t >= T.burst && t < T.burst + 1.2) {
-        const p = clamp((t - T.burst) / 1.1);
+      if (t >= T.burst && t < T.burst + 2.2) {
+        const p = clamp((t - T.burst) / 2.0);
         ctx.save();
         ctx.strokeStyle = C.ink;
         ctx.lineWidth = 2;
-        ctx.globalAlpha *= (1 - p) * 0.8;
+        ctx.globalAlpha *= Math.sin(Math.PI * p) * 0.8;
         ctx.beginPath();
         for (let i = 0; i < 26; i++) {
           const ang = (i / 26) * TAU + 0.12;
@@ -392,31 +580,38 @@
         ctx.stroke();
         ctx.restore();
       }
-      const p0 = sp(t - (T.burst + 0.2), SPR.long);
-      const p1 = sp(t - T.fold, SPR.card);
+      const p0 = sp(t - T.cone, [26, 2 * Math.sqrt(26)]);
+      const p1 = sp(t - T.fold, [40, 2 * Math.sqrt(40)]);
       coneB(ctx, o, ax, p0, p1, 1);
       // the disc the sensor cuts from the cone
-      const dv = clamp((o.disc - 6) / 14) * clamp((t - T.nearer) / 0.3);
-      if (dv > 0.001) {
-        vdim(ctx, B.xs + 26, ax - o.disc / 2, ax + o.disc / 2, C.ink, dv);
-      }
+      const dv = clamp((o.disc - 6) / 14) * clamp((t - T.behind) / 0.4);
+      if (dv > 0.001) vdim(ctx, B.xs + 26, ax - o.disc / 2, ax + o.disc / 2, C.ink, dv);
       ctx.restore();
     }
 
-    // captions
-    const base = { kind: "serif", size: 84, color: C.ink };
-    const lines = [
-      [T.burst, T.fold, [{ s: "Light leaves a point as a " }, { s: "cone", italic: true }, { s: "." }]],
-      [T.fold, T.nearer, [{ s: "The lens folds it back to a " }, { s: "point", italic: true }, { s: "." }]],
-      [T.nearer, T.farther, [{ s: "Nearer, it lands as a " }, { s: "disc", italic: true }, { s: "." }]],
-      [T.farther, T.onlyOne, [{ s: "Farther, a " }, { s: "disc", italic: true }, { s: " again." }]],
-      [T.onlyOne, T.irisB, [{ s: "Only " }, { s: "one", italic: true }, { s: " distance makes a point." }]],
-      [T.irisB, T.grid - 0.3, [{ s: "A smaller aperture, a " }, { s: "smaller", italic: true }, { s: " disc." }]],
-    ];
-    for (const [a, b, parts] of lines) {
-      const ph = phase(t, a + 0.05, b - 0.2, SPR.type, 0.25);
-      riseRuns(ctx, parts, 150, 250, base, ph.in, ph.out);
-    }
+    captions(ctx, t, [
+      [T.turn, T.domino, [{ s: "To see it, look from the side." }]],
+      [T.domino, T.burst, [{ s: "Take one point: a dot on a domino." }]],
+      [T.burst, T.cone, [{ s: "Light leaves it in every direction." }]],
+      [T.cone, T.fold, [{ s: "The aperture lets in a " }, it("cone"), { s: " of it." }]],
+      [T.fold, T.inFocusB, [{ s: "The lens bends the cone back to a " }, it("point"), { s: "." }]],
+      [T.inFocusB, T.nearer, [{ s: "The point lands on the sensor as a dot." }]],
+      [T.inFocusB + 1.25, T.nearer, [{ s: "That dot is " }, it("in focus"), { s: "." }], 1],
+      [T.nearer, T.discNear, [{ s: "Move the domino closer," }]],
+      [T.behind, T.discNear, [{ s: "and the cone meets " }, it("behind"), { s: " the sensor." }], 1],
+      [T.discNear, T.farther, [{ s: "The sensor cuts the cone:" }]],
+      [T.discNear + 0.625, T.farther, [{ s: "a " }, it("disc"), { s: ", not a dot." }], 1],
+      [T.farther, T.bridge, [{ s: "Farther away, it meets " }, it("in front"), { s: "." }]],
+      [T.discFar, T.bridge, [{ s: "A disc again." }], 1],
+      [T.bridge, T.irisB, [{ s: "That disc " }, it("is"), { s: " blur." }]],
+      [T.bridge2, T.irisB, [{ s: "Every soft point in a photo is one." }], 1],
+      [T.irisB, T.irisBOpen, [{ s: "Now close the aperture." }]],
+      [T.irisB2, T.irisBOpen, [{ s: "The cone narrows, so the disc " }, it("shrinks"), { s: "." }], 1],
+      [T.irisBOpen, T.question, [{ s: "That is its second job:" }]],
+      [T.irisBOpen + 0.625, T.question, [{ s: "it sets how big the blur gets." }], 1],
+      [T.question, T.grid - 0.2, [{ s: "But a disc is never a point." }]],
+      [T.question + 1.25, T.grid - 0.2, [{ s: "So when does a disc look " }, it("sharp?")], 1],
+    ], 150, 200);
   }
 
   function arrowHead(ctx, x, y, dx, dy, size) {
@@ -856,21 +1051,21 @@
     const cs = phase(t, T.eye + 0.5, T.print - 0.15, SPR.ui, 0.25);
     chip(ctx, "2.5 µm apart", BUB.x - 60, BUB.y + BUB.r + 56, cs.in, cs.out, { size: 48, align: "center", fill: C.ink });
 
-    // captions
-    const base = { kind: "serif", size: 84, color: C.ink };
-    const lines = [
-      [T.grid + 0.3, T.dot, [{ s: "A sensor counts light in " }, { s: "pixels", italic: true }, { s: "." }]],
-      [T.dot, T.smallDisc, [{ s: "A point lights one pixel." }]],
-      [T.smallDisc, T.bigDisc, [{ s: "A smaller disc lights it " }, { s: "the same", italic: true }, { s: "." }]],
-      [T.bigDisc, T.grain, [{ s: "Only a bigger one " }, { s: "shows", italic: true }, { s: "." }]],
-      [T.grain, T.fastFilm, [{ s: "Film: grains of " }, { s: "silver", italic: true }, { s: "." }]],
-      [T.fastFilm, T.cones, [{ s: "Faster film, " }, { s: "bigger", italic: true }, { s: " grains." }]],
-      [T.cones, T.arcmin, [{ s: "Your eye: a mosaic of " }, { s: "cones", italic: true }, { s: "." }]],
-    ];
-    for (const [a, b, parts] of lines) {
-      const ph = phase(t, a + 0.05, b - 0.2, SPR.type, 0.25);
-      riseRuns(ctx, parts, 150, 190, base, ph.in, ph.out);
-    }
+    captions(ctx, t, [
+      [T.grid + 0.3, T.dot, [{ s: "Zoom into the sensor:" }]],
+      [T.grid + 1.25, T.dot, [{ s: "a grid of tiny light meters, " }, it("pixels"), { s: "." }], 1],
+      [T.dot, T.smallDisc, [{ s: "A sharp point lights one pixel." }]],
+      [T.smallDisc, T.same, [{ s: "A disc smaller than a pixel" }]],
+      [T.smallDisc + 0.625, T.same, [{ s: "lights it " }, it("exactly the same"), { s: "." }], 1],
+      [T.same, T.bigDisc, [{ s: "To the sensor, it is still a point." }]],
+      [T.bigDisc, T.grain, [{ s: "Only a disc bigger than a pixel" }]],
+      [T.bigDisc + 0.625, T.grain, [{ s: "spreads out and shows as " }, it("blur"), { s: "." }], 1],
+      [T.grain, T.fastFilm, [{ s: "Film works the same way," }]],
+      [T.grain + 0.625, T.fastFilm, [{ s: "with grains of " }, it("silver"), { s: "." }], 1],
+      [T.fastFilm, T.cones, [{ s: "Faster film, " }, it("bigger"), { s: " grains." }]],
+      [T.cones, T.arcmin, [{ s: "So does your eye," }]],
+      [T.cones + 0.625, T.arcmin, [{ s: "with cells called " }, it("cones"), { s: "." }], 1],
+    ]);
   }
 
   // ------------------------------------------------------------------ the chain: eye, print, sensor
@@ -883,7 +1078,7 @@
   const COC_R = 15 * UM;
   function diveRing(t) {
     const fwd = sp(t - T.shrink, SPR.card);
-    const shrink = sp(t - (T.shrink + 1.25), SPR.card);
+    const shrink = sp(t - T.shrink2, SPR.card);
     const dive = ease.inOutCubic(clamp((t - (T.coc - 0.4)) / 0.75));
     const r0 = 15 * lerp(1, 2, fwd) * lerp(1, 1 / 4.17, shrink);
     const z = Math.exp(dive * Math.log(COC_R / ((15 * 2) / 4.17)));
@@ -1013,13 +1208,12 @@
     riseRuns(ctx, [{ s: "1′", color: C.accent }], 150, 520, { kind: "serif", size: 300, color: C.ink }, big.in, big.out);
     const cap2 = phase(t, T.arcmin + 0.625, T.print - 0.15, SPR.type, 0.3);
     riseRuns(ctx, [{ s: "one arcminute, 1/60°" }], 150, 630, { kind: "mono", size: 52, color: C.ink }, cap2.in, cap2.out);
-    const base = { kind: "serif", size: 84, color: C.ink };
-    const l1 = phase(t, T.print + 0.1, T.shrink + 1.1, SPR.type, 0.25);
-    riseRuns(ctx, [{ s: "At 40 cm, 1′ spans " }, { s: "0.12 mm", color: C.accent }, { s: " of a print." }], 150, 190, base, l1.in, l1.out);
-    const l2 = phase(t, T.shrink + 1.35, T.coc - 0.3, SPR.type, 0.25);
-    riseRuns(ctx, [{ s: "On the sensor, that is " }, { s: "0.03 mm", color: C.accent }, { s: "." }], 150, 190, base, l2.in, l2.out);
-    const l3 = phase(t, T.shrink + 1.6, T.coc - 0.3, SPR.type, 0.25);
-    riseRuns(ctx, [{ s: "The print is 4.2 times the sensor." }], 150, 290, { kind: "mono", size: 50, color: C.dim }, l3.in, l3.out);
+    captions(ctx, t, [
+      [T.print, T.shrink, [{ s: "Hold a 15 cm print 40 cm away:" }]],
+      [T.print + 1.25, T.shrink2, [{ s: "1′ covers just " }, ac("0.12 mm"), { s: " of it." }], 1],
+      [T.shrink, T.shrink2, [{ s: "The print is 4.2 times the sensor," }]],
+      [T.shrink2, T.coc - 0.3, [{ s: "so on the sensor, it is " }, ac("0.03 mm"), { s: "." }]],
+    ]);
   }
 
   // The circle of confusion on the sensor: five photosites across.
@@ -1027,23 +1221,22 @@
     const R = diveRing(t);
     const pitch = (R.r * 6) / 15;
     const fr = { x: R.x, y: R.y, pitch };
-    const out = phase(t, T.coc - 0.4, T.chart, SPR.ui, 0.35);
+    const out = phase(t, T.coc - 0.4, T.back, SPR.ui, 0.5);
     drawPixels(ctx, fr, new Map(), clamp((pitch - 10) / 30) * (1 - out.out), { x0: 0, y0: 0, x1: W, y1: H });
-    // the ring then travels to the focused domino's place in the chart
-    const travel = sp(t - T.chart, SPR.card);
-    if (R.dive > 0 && t < T.chart + 0.7) {
+    if (R.dive > 0) {
       ctx.save();
+      ctx.globalAlpha = 1 - out.out;
       ctx.strokeStyle = C.accent;
-      ctx.lineWidth = lerp(lerp(3.5, 6, R.dive), 3, travel);
+      ctx.lineWidth = lerp(3.5, 6, R.dive);
       ctx.beginPath();
-      ctx.arc(lerp(fr.x, chX(O.FOCUS), travel), lerp(fr.y, CH.discY, travel), lerp(R.r, (O.coc * CH.k) / 2 + 1.5, travel), 0, TAU);
+      ctx.arc(fr.x, fr.y, R.r, 0, TAU);
       ctx.stroke();
       ctx.restore();
     }
-    const dim = phase(t, T.coc + 0.4, T.chart - 0.3, SPR.ui, 0.3);
+    const dim = phase(t, T.coc + 0.6, T.back - 0.3, SPR.ui, 0.3);
     hdim(ctx, fr.x - R.r, fr.x + R.r, fr.y + R.r + 46, C.accent, clamp(dim.in * 1.4) * (1 - dim.out));
     chip(ctx, "0.03 mm", fr.x, fr.y + R.r + 110, dim.in, dim.out, { size: 44, align: "center" });
-    const five = phase(t, T.coc + 0.75, T.chart - 0.3, SPR.ui, 0.3);
+    const five = phase(t, T.coc + 1.25, T.back - 0.3, SPR.ui, 0.3);
     if (five.in > 0.001) {
       ctx.save();
       ctx.globalAlpha = clamp(five.in * 1.3) * (1 - five.out);
@@ -1053,11 +1246,11 @@
       ctx.fillText("5 photosites", fr.x + R.r + 40, fr.y + 16);
       ctx.restore();
     }
-    const base = { kind: "serif", size: 84, color: C.ink };
-    const l1 = phase(t, T.coc + 0.5, T.chart - 0.2, SPR.type, 0.25);
-    riseRuns(ctx, [{ s: "Blur smaller than this looks " }, { s: "sharp", italic: true }, { s: "." }], 150, 190, base, l1.in, l1.out);
-    const l2 = phase(t, T.cocLabel, T.chart - 0.2, SPR.type, 0.25);
-    riseRuns(ctx, [{ s: "the circle of confusion", italic: true }], 150, 290, { kind: "serif", size: 72, color: C.accent }, l2.in, l2.out);
+    captions(ctx, t, [
+      [T.coc + 0.5, T.back, [{ s: "Any blur smaller than this ring" }]],
+      [T.coc + 1.1, T.back, [{ s: "looks " }, it("sharp"), { s: " to you." }], 1],
+    ]);
+    captions(ctx, t, [[T.cocLabel, T.back, [{ s: "Photographers call it " }, { s: "the circle of confusion", italic: true, color: C.accent }, { s: "." }]]], 150, 1010, { kind: "serif", size: 64, color: C.ink });
   }
 
   // ------------------------------------------------------------------ act D
@@ -1112,18 +1305,36 @@
     ctx.restore();
   }
 
+  // Where each domino stands in the photograph (face center and width), to morph from.
+  const photoView = { cx: W / 2, cy: H * 0.39, S: W / 36 };
+  function photoDomino(d) {
+    const c = SC.proj(photoView, [d.x, -SC.HCAM + 24, d.z]);
+    return { x: c[0], y: c[1], w: (24 * photoView.S * O.f) / d.z };
+  }
+
   function actD(ctx, t) {
     const N = ND(t);
     const s = O.FOCUS;
     const [zn, zf] = O.limits(N, s);
-    const build = (i) => sp(t - (T.chart + 0.25 + Math.abs(i - O.FOCUS_INDEX) * 0.1), SPR.card);
     const gone = t < T.answer ? 0 : ease.inCubic(clamp((t - T.answer) / 0.35));
     if (gone >= 0.999) return;
+
+    // back to the photograph at f/1.4, which then gives way to the chart
+    const rise = sp(t - T.back, SPR.card);
+    const photoA = clamp(rise * 1.3) * (1 - ease.inOutCubic(clamp((t - T.chart) / 1.2)));
+    if (photoA > 0.001) {
+      ctx.save();
+      ctx.globalAlpha = photoA;
+      ctx.translate(0, (1 - rise) * 120);
+      picture(ctx, FULL, { s, N: Math.SQRT2 });
+      ctx.restore();
+    }
+    captions(ctx, t, [[T.back + 0.3, T.chart, [{ s: "Back to the eight dominoes, at f/1.4." }]]], 150, 200);
+
     ctx.save();
     ctx.globalAlpha = 1 - gone;
-
     // the axis, its ticks, and the sharp zone on it
-    const ap = ease.outCubic(clamp((t - T.chart - 0.1) / 0.6));
+    const ap = ease.outCubic(clamp((t - T.chart - 0.8) / 0.8));
     ctx.strokeStyle = C.rule;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1142,65 +1353,74 @@
       ctx.fillText(String(z / 10), x, CH.axis + 66);
     }
     ctx.globalAlpha = 1 - gone;
-    const ul = phase(t, T.chart + 0.6, Infinity, SPR.type);
-    riseRuns(ctx, [{ s: "cm from the lens" }], CH.x1, CH.axis + 120, { kind: "mono", size: 42, color: C.dim }, ul.in, 0, "right");
+    const ul = phase(t, T.chart + 1.3, Infinity, SPR.type);
+    riseRuns(ctx, [{ s: "cm" }], CH.x1 + 34, CH.axis + 66, { kind: "mono", size: 42, color: C.dim }, ul.in, 0, "left");
 
-    const band = sp(t - T.band, SPR.ui);
+    const band = sp(t - T.band2, SPR.ui);
     if (band > 0.001) {
       const xa = chX(Math.max(zn, CH.z0));
       const xb = chX(Math.min(zf, CH.z1));
       const mid = chX(s);
-      const a = lerp(mid, xa, band);
-      const b = lerp(mid, xb, band);
       ctx.fillStyle = C.accent;
-      ctx.fillRect(a, CH.axis - 7, b - a, 14);
+      ctx.fillRect(lerp(mid, xa, band), CH.axis - 7, lerp(mid, xb, band) - lerp(mid, xa, band), 14);
     }
 
-    // dominoes, discs and rings
+    // dominoes leave the photograph for their places on the axis; discs and rings follow
     const ap9 = SC.aperturePath(N);
     SC.DOMS.forEach((d, i) => {
       const x = chX(d.z);
-      const p = build(i);
-      if (p <= 0.001) return;
+      const m = sp(t - (T.chart + 0.15 + i * 0.07), [60, 2 * Math.sqrt(60)]);
+      if (t < T.chart) return;
+      const from = photoDomino(d);
       const c = O.disc(d.z, N, s);
       const inside = c <= O.coc;
       const te = lastEntry(i, t);
       const pop = te !== undefined && t >= te ? 0.28 * Math.pow(clamp(1 - (t - te) / 0.3), 2) : 0;
-      dominoIcon(ctx, x, CH.axis - 10, 40, PIPS_ICON[i], clamp(p * 1.4), inside, pop);
+      const w = lerp(from.w, 40, m);
+      const yBase = lerp(from.y + from.w, CH.axis - 10, m);
+      dominoIcon(ctx, lerp(from.x, x, m), yBase, w, PIPS_ICON[i], clamp((t - T.chart) * 3), inside || m < 0.6, pop);
       // the blur disc
-      const dpx = Math.max(c * CH.k, 7) * p;
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      const a = clamp(0.95 * Math.pow(12 / Math.max(dpx, 12), 0.62), 0.14, 0.95);
-      SC.bokeh(ctx, ctx.getTransform(), ap9, x, CH.discY, dpx, WARM, a * clamp(p * 1.4));
-      ctx.restore();
-      // the limit (the focused domino's ring arrives from the sensor)
-      ctx.save();
-      ctx.globalAlpha *= i === O.FOCUS_INDEX ? clamp((t - (T.chart + 0.62)) / 0.08) : clamp(p * 1.4);
-      ctx.strokeStyle = C.accent;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x, CH.discY, (O.coc * CH.k) / 2 + 1.5, 0, TAU);
-      ctx.stroke();
-      if (inside) {
-        ctx.fillStyle = "rgba(255,106,26,0.18)";
-        ctx.fill();
+      const p = sp(t - (T.discs + Math.abs(i - O.FOCUS_INDEX) * 0.1), SPR.card);
+      if (p > 0.001) {
+        const dpx = Math.max(c * CH.k, 7) * p;
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const a = clamp(0.95 * Math.pow(12 / Math.max(dpx, 12), 0.62), 0.14, 0.95);
+        SC.bokeh(ctx, ctx.getTransform(), ap9, x, lerp(CH.axis - 60, CH.discY, p), dpx, WARM, a * clamp(p * 1.4));
+        ctx.restore();
       }
-      ctx.restore();
+      // the limit you can see
+      const rp = sp(t - (T.rings + Math.abs(i - O.FOCUS_INDEX) * 0.1), SPR.ui);
+      if (rp > 0.001) {
+        ctx.save();
+        ctx.globalAlpha *= clamp(rp * 1.4);
+        ctx.strokeStyle = C.accent;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, CH.discY, ((O.coc * CH.k) / 2 + 1.5) * lerp(2.5, 1, rp), 0, TAU);
+        ctx.stroke();
+        if (inside && t > T.band) {
+          ctx.fillStyle = "rgba(255,106,26,0.18)";
+          ctx.fill();
+        }
+        ctx.restore();
+      }
     });
 
     // the f-number, with the iris it sets
     const fv = MARKS_D.map(([tt, k]) => [tt, O.LABELS[k]]);
-    flipLabel(ctx, t, fv, 150, 250, { kind: "serif", size: 150, color: C.ink }, (v) => [{ s: "f/", italic: true }, { s: v }]);
-    const ir = sp(t - (T.chart + 0.5), SPR.card);
+    flipLabel(ctx, t, fv, 150, 250, { kind: "serif", size: 150, color: C.ink }, (v) => [it("f/"), { s: v }]);
+    const ir = sp(t - (T.chart + 1.0), SPR.card);
     if (ir > 0.001) miniIris(ctx, 640, 200, 78 * ir, 1.414 / N);
 
     // light and depth
-    const lv = MARKS_D.map(([tt, k], j) => [j ? tt : T.chart + 0.7, k === 1 ? "1" : "1/" + Math.pow(2, k - 1)]);
-    const lb = phase(t, T.chart + 0.6, Infinity, SPR.type);
+    const tl = T.stopsD[0] - 1.25;
+    const lname = (k) => (k === 1 ? "1" : "1/" + Math.pow(2, k - 1));
+    const lv = [[tl, "1"], ...MARKS_D.slice(1).map(([tt, k]) => [tt, lname(k)])];
+    const lb = phase(t, tl, Infinity, SPR.type);
     riseRuns(ctx, [{ s: "light" }], 1290, 124, { kind: "mono", size: 54, color: C.dim }, lb.in, 0, "right");
     flipLabel(ctx, t, lv, 1290, 250, { kind: "serif", size: 110, color: C.ink }, (v) => [{ s: v }], "right");
-    const db = phase(t, T.band, Infinity, SPR.type);
+    const db = phase(t, T.band2, Infinity, SPR.type);
     riseRuns(ctx, [{ s: "depth of field" }], 1770, 124, { kind: "mono", size: 54, color: C.accent }, db.in, 0, "right");
     if (db.in > 0.001) {
       K.masked(ctx, 1380, 1800, 250, 110, 40, db.in, 0, () => {
@@ -1212,22 +1432,18 @@
         odometer(ctx, cm, 1770 - 92, 250, { size: 110, color: C.ink, decimals: 1, slot: 0.46 });
       });
     }
-
     ctx.restore();
 
-    // captions, along the bottom
-    const base = { kind: "serif", size: 76, color: C.ink };
-    const lines = [
-      [T.chart + 0.5, T.band, [{ s: "Each domino's blur, at f/1.4." }]],
-      [T.band, T.stopsD[0], [{ s: "Inside the ring, it looks " }, { s: "sharp", italic: true }, { s: "." }]],
-      [T.stopsD[0], T.light, [{ s: "Close the aperture one stop at a time." }]],
-      [T.light, T.both, [{ s: "1/128 the light. About 12 times the " }, { s: "depth", italic: true }, { s: "." }]],
-      [T.both, T.answer, [{ s: "The aperture sets the light " }, { s: "and", italic: true }, { s: " the blur." }]],
-    ];
-    for (const [a, b, parts] of lines) {
-      const ph = phase(t, a + 0.05, b - 0.2, SPR.type, 0.25);
-      riseRuns(ctx, parts, 150, 1020, base, ph.in, ph.out);
-    }
+    captions(ctx, t, [
+      [T.chart + 0.3, T.discs, [{ s: "Stand them along a line, by distance from the lens." }]],
+      [T.discs, T.rings, [{ s: "Above each: the blur disc it makes, enlarged." }]],
+      [T.rings, T.band, [{ s: "Around each: the ring, the smallest blur you can see." }]],
+      [T.band, T.band2, [{ s: "Only one disc fits inside its ring." }]],
+      [T.band2, T.stopsD[0], [{ s: "That narrow range is the " }, it("depth of field"), { s: "." }]],
+      [T.stopsD[0], T.light, [{ s: "Now close the aperture, a stop at a time." }]],
+      [T.light, T.both, [{ s: "1/128 of the light, but about 12 times the " }, it("depth"), { s: "." }]],
+      [T.both, T.answer, [{ s: "The aperture trades " }, it("light"), { s: " for " }, it("depth"), { s: "." }]],
+    ], 150, 1020, { kind: "serif", size: 72, color: C.ink });
   }
 
   // The aperture seen from the front: nine blades in a ring, open by `open` (1 = f/1.4).
@@ -1271,7 +1487,7 @@
     // one in focus
     const d4 = SC.DOMS[O.FOCUS_INDEX];
     const top = SC.proj(view, [d4.x, -SC.HCAM + 48, d4.z]);
-    const mk = phase(t, T.inFocus + 0.15, T.close - 0.1, SPR.ui, 0.3);
+    const mk = phase(t, T.inFocus + 0.15, T.recap - 0.1, SPR.ui, 0.3);
     if (mk.in > 0.001) {
       ctx.save();
       ctx.globalAlpha = clamp(mk.in * 1.4) * (1 - mk.out);
@@ -1287,7 +1503,7 @@
     }
 
     // the farthest domino's blur, magnified against the limit
-    const ins = phase(t, T.inset, T.close - 0.1, SPR.card, 0.35);
+    const ins = phase(t, T.inset, T.recap - 0.1, SPR.card, 0.35);
     if (ins.in > 0.001) {
       const d8 = SC.DOMS[7];
       const pip = SC.proj(view, [d8.x + 6.4, -SC.HCAM + 48 - 12 + 6.4, d8.z]);
@@ -1322,35 +1538,211 @@
       ctx.arc(bc[0], bc[1], ringR, 0, TAU);
       ctx.stroke();
       ctx.restore();
-      const lb = phase(t, T.inset + 0.3, T.close - 0.1, SPR.type, 0.3);
+      const lb = phase(t, T.inset + 0.3, T.recap - 0.1, SPR.type, 0.3);
       const mono = { kind: "mono", size: 46, color: C.ink };
       riseRuns(ctx, [{ s: "blur " }, { s: `${c.toFixed(3)} mm` }], 1460, 572, mono, lb.in, lb.out);
       riseRuns(ctx, [{ s: "limit " }, { s: "0.030 mm", color: C.accent }], 1460, 632, { ...mono, color: C.dim }, lb.in, lb.out);
     }
 
-    // the iris: opening on the picture, closing on the lockup
-    const closeP = t < T.close ? 0 : ease.inOutCubic(clamp((t - T.close) / 0.7));
-    let r = lerp(9, 1250, open);
-    if (closeP > 0) r = 1250 * (1 - closeP);
-    const icx = closeP > 0 ? W / 2 : cx;
-    const icy = closeP > 0 ? H / 2 : cy;
+    // the iris opening on the picture
+    const r = lerp(9, 1250, open);
     if (r < 1250) {
       ctx.save();
       ctx.globalAlpha = fadeIn;
-      iris(ctx, r, 0.4 + r * 0.0007, icx, icy);
+      iris(ctx, r, 0.4 + r * 0.0007, cx, cy);
       ctx.restore();
     }
+    // the picture gives way to the chain
+    const out = ease.inOutCubic(clamp((t - T.recap) / 0.7));
+    if (out > 0) {
+      ctx.fillStyle = `rgba(12,15,23,${out})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    captions(ctx, t, [
+      [T.inFocus, T.rest, [{ s: "Only one distance is in " }, it("focus"), { s: "." }]],
+      [T.rest, T.recap, [{ s: "The other seven blur by less" }]],
+      [T.rest + 0.625, T.recap, [{ s: "than you can " }, it("see"), { s: "." }], 1],
+    ], 150, 250, { kind: "serif", size: 92, color: C.ink });
+  }
 
-    // captions
-    const base = { kind: "serif", size: 92, color: C.ink };
-    const c1 = phase(t, T.inFocus, T.rest - 0.2, SPR.type, 0.25);
-    riseRuns(ctx, [{ s: "One distance is in " }, { s: "focus", italic: true }, { s: "." }], 150, 250, base, c1.in, c1.out);
-    const c2 = phase(t, T.rest, T.close - 0.15, SPR.type, 0.3);
-    riseRuns(ctx, [{ s: "The rest blur less" }], 150, 250, base, c2.in, c2.out);
-    const c3 = phase(t, T.rest + 0.3125, T.close - 0.15, SPR.type, 0.3);
-    riseRuns(ctx, [{ s: "than you can " }, { s: "see", italic: true }, { s: "." }], 150, 360, base, c3.in, c3.out);
+  // ------------------------------------------------------------------ act G: the chain, once
 
-    // lockup
+  const LADDER = [250, 600, 960, 1320, 1670];
+  const LADDER_Y = 560;
+  const LS = 1.2; // ladder scale
+
+  function actG(ctx, t) {
+    const gone = ease.inCubic(clamp((t - T.coda) / 0.5));
+    if (gone >= 0.999) return;
+    ctx.save();
+    ctx.globalAlpha = 1 - gone;
+    const openAt = (k) => lerp(1, Math.SQRT2 / 16, ease.inOutCubic(clamp((t - T.recapRun - k * 0.45) / 1.4)));
+    const names = ["aperture", "cone of light", "blur disc", "against the ring", "depth of field"];
+    LADDER.forEach((x, k) => {
+      const p = sp(t - (T.recap + 0.625 + k * 1.25), SPR.card);
+      if (p <= 0.001) return;
+      const o = openAt(k);
+      const y = LADDER_Y + (1 - p) * 40;
+      ctx.save();
+      ctx.globalAlpha *= clamp(p * 1.4);
+      if (k === 0) miniIris(ctx, x, y, 100 * LS, o);
+      if (k === 1) {
+        ctx.fillStyle = C.tint;
+        ctx.beginPath();
+        ctx.moveTo(x - 120, y - 110 * o);
+        ctx.lineTo(x + 120, y);
+        ctx.lineTo(x - 120, y + 110 * o);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = C.ink;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+      if (k === 2 || k === 3) {
+        const d = Math.max(8, 210 * o);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        SC.bokeh(ctx, ctx.getTransform(), SC.aperturePath(Math.SQRT2 / o), x, y, d, WARM, clamp(0.95 * Math.pow(14 / d, 0.55), 0.2, 0.95));
+        ctx.restore();
+        if (k === 3) {
+          ctx.strokeStyle = C.accent;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(x, y, 40, 0, TAU);
+          ctx.stroke();
+          if (d < 80) {
+            ctx.fillStyle = "rgba(255,106,26,0.18)";
+            ctx.fill();
+          }
+        }
+      }
+      if (k === 4) {
+        ctx.strokeStyle = C.rule;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 130, y + 20);
+        ctx.lineTo(x + 130, y + 20);
+        ctx.stroke();
+        const half = clamp(14 / o, 14, 125);
+        ctx.fillStyle = C.accent;
+        ctx.fillRect(x - half, y + 13, half * 2, 14);
+      }
+      ctx.restore();
+      riseRuns(ctx, [{ s: names[k] }], x, LADDER_Y + 210, { kind: "serif", size: 58, color: C.ink }, p, 0, "center");
+      // the arrow from the link before
+      if (k > 0) {
+        ctx.save();
+        ctx.globalAlpha *= clamp(p * 1.4);
+        ctx.fillStyle = C.dim;
+        const ax = (LADDER[k - 1] + x) / 2 + 10;
+        arrowHead(ctx, ax + 12, LADDER_Y, 1, 0, 20);
+        ctx.fillRect(ax - 22, LADDER_Y - 1.5, 28, 3);
+        ctx.restore();
+      }
+    });
+    ctx.restore();
+    captions(ctx, t, [
+      [T.recap, T.recapRun, [{ s: "The whole chain, once:" }]],
+      [T.recapRun, T.coda, [{ s: "Close the aperture, and every link follows:" }]],
+      [T.recapRun + 2.5, T.coda, [{ s: "a narrower cone, a smaller disc, a deeper sharp zone." }], 1],
+    ], 150, 220, { kind: "serif", size: 76, color: C.ink });
+  }
+
+  // ------------------------------------------------------------------ act H: who draws the ring
+
+  // The limit you can see, as the picture is looked at more closely in the coda.
+  const cocH = (t) => lerp(O.coc, 0.01, ease.inOutCubic(clamp((t - (T.closer + 1.25)) / 2.2)));
+  const ENTER_H = [];
+
+  function actH(ctx, t) {
+    const N = 16;
+    const s = O.FOCUS;
+    const coc = cocH(t);
+    const [zn, zf] = O.limits(N, s, coc);
+    const shrinkR = (coc / O.coc) * ((O.coc * CH.k) / 2 + 1.5);
+    const gone = t < T.close ? 0 : ease.inCubic(clamp((t - T.close) / 0.5));
+    ctx.save();
+    ctx.globalAlpha = 1 - gone;
+    const ap = ease.outCubic(clamp((t - T.coda - 0.2) / 0.8));
+    ctx.strokeStyle = C.rule;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(CH.x0, CH.axis);
+    ctx.lineTo(lerp(CH.x0, CH.x1, ap), CH.axis);
+    ctx.stroke();
+    font(ctx, "mono", 42);
+    ctx.textAlign = "center";
+    ctx.fillStyle = C.dim;
+    for (let z = 700; z <= 950; z += 50) {
+      const x = chX(z);
+      ctx.save();
+      ctx.globalAlpha *= clamp((ap - ((x - CH.x0) / (CH.x1 - CH.x0)) * 0.75) * 4);
+      ctx.fillRect(x - 1, CH.axis + 8, 2, 14);
+      ctx.fillText(String(z / 10), x, CH.axis + 66);
+      ctx.restore();
+    }
+    const bandP = sp(t - (T.coda + 0.6), SPR.ui);
+    ctx.fillStyle = C.accent;
+    const xa = chX(Math.max(zn, CH.z0));
+    const xb = chX(Math.min(zf, CH.z1));
+    const mid = chX(s);
+    ctx.fillRect(lerp(mid, xa, bandP), CH.axis - 7, lerp(mid, xb, bandP) - lerp(mid, xa, bandP), 14);
+    const ap9 = SC.aperturePath(N);
+    SC.DOMS.forEach((d, i) => {
+      const x = chX(d.z);
+      const p = sp(t - (T.coda + 0.2 + Math.abs(i - O.FOCUS_INDEX) * 0.06), SPR.card);
+      const c = O.disc(d.z, N, s);
+      const inside = c <= coc;
+      dominoIcon(ctx, x, CH.axis - 10, 40, PIPS_ICON[i], clamp(p * 1.4), inside);
+      const dpx = Math.max(c * CH.k, 7) * p;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      SC.bokeh(ctx, ctx.getTransform(), ap9, x, CH.discY, dpx, WARM, clamp(0.95 * Math.pow(12 / Math.max(dpx, 12), 0.62), 0.14, 0.95) * clamp(p * 1.4));
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha *= clamp(p * 1.4);
+      ctx.strokeStyle = C.accent;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x, CH.discY, shrinkR, 0, TAU);
+      ctx.stroke();
+      if (inside) {
+        ctx.fillStyle = "rgba(255,106,26,0.18)";
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+    // readouts: the limit and the depth it allows
+    const rd = phase(t, T.coda + 0.6, Infinity, SPR.type);
+    riseRuns(ctx, [{ s: "f/16" }], 150, 250, { kind: "serif", size: 150, color: C.ink }, rd.in, 0);
+    riseRuns(ctx, [{ s: "limit" }], 1290, 124, { kind: "mono", size: 54, color: C.accent }, rd.in, 0, "right");
+    riseRuns(ctx, [{ s: "depth of field" }], 1770, 124, { kind: "mono", size: 54, color: C.accent }, rd.in, 0, "right");
+    if (rd.in > 0.001) {
+      K.masked(ctx, 860, 1800, 250, 110, 40, rd.in, 0, () => {
+        font(ctx, "serif", 70, { italic: true });
+        ctx.fillStyle = C.ink;
+        ctx.textAlign = "right";
+        ctx.fillText("mm", 1290, 250);
+        odometer(ctx, coc, 1290 - 120, 250, { size: 110, color: C.ink, decimals: 3, slot: 0.46 });
+        font(ctx, "serif", 70, { italic: true });
+        ctx.textAlign = "right";
+        ctx.fillText("cm", 1770, 250);
+        odometer(ctx, (zf - zn) / 10, 1770 - 92, 250, { size: 110, color: C.ink, decimals: 1, slot: 0.46 });
+      });
+    }
+    ctx.restore();
+    captions(ctx, t, [
+      [T.coda + 0.3, T.closer, [{ s: "One last question: who draws the ring?" }]],
+      [T.closer, T.thinner, [{ s: "Print it three times bigger, or look closer," }]],
+      [T.closer + 1.25, T.thinner, [{ s: "and you can see three times finer blur." }], 1],
+      [T.thinner, T.who, [{ s: "The ring shrinks, fewer dominoes fit," }]],
+      [T.thinner + 0.625, T.who, [{ s: "and the sharp zone gets " }, it("thinner"), { s: "." }], 1],
+      [T.who, T.close, [{ s: "Depth of field depends on " }, it("who is looking"), { s: "." }]],
+    ], 150, 400, { kind: "serif", size: 72, color: C.ink });
+
+    // the iris closes on the lockup
+    const closeP = t < T.close ? 0 : ease.inOutCubic(clamp((t - T.close) / 0.7));
+    if (closeP > 0) iris(ctx, 1250 * (1 - closeP), 0.4 + 1250 * (1 - closeP) * 0.0007);
     if (t >= T.lockup - 0.1) {
       const lk = phase(t, T.lockup, Infinity, SPR.type);
       const lk2 = phase(t, T.lockup + 0.3125, Infinity, SPR.type);
@@ -1369,12 +1761,16 @@
     ctx.setTransform(res, 0, 0, res, 0, 0);
     ctx.fillStyle = C.ground;
     ctx.fillRect(0, 0, W, H);
-    if (t < T.cone) actA(ctx, t);
-    if (t >= T.cone && t < T.grid + 1.2) actB(ctx, t);
+    if (t < T.apIntro + 1.0) actA(ctx, t);
+    if (t >= T.apIntro && t < T.turn + 1.0) actAp(ctx, t);
+    if (t < T.turn + 0.5) fNumber(ctx, t);
+    if (t >= T.turn && t < T.grid + 1.2) actB(ctx, t);
     if (t >= T.grid && t < T.coc + 0.6) actC(ctx, t);
-    if (t >= T.coc - 0.5 && t < T.chart + 1.2) actC2(ctx, t);
-    if (t >= T.chart && t < T.answer + 0.5) actD(ctx, t);
-    if (t >= T.answer) actE(ctx, t);
+    if (t >= T.coc - 0.5 && t < T.back + 1.0) actC2(ctx, t);
+    if (t >= T.back && t < T.answer + 0.5) actD(ctx, t);
+    if (t >= T.answer && t < T.recap + 0.8) actE(ctx, t);
+    if (t >= T.recap && t < T.coda + 0.6) actG(ctx, t);
+    if (t >= T.coda) actH(ctx, t);
     ctx.restore();
   }
 

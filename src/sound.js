@@ -94,11 +94,12 @@
     // blur; both close in as the aperture stops down in parts A and D.
     function sharpness(t) {
       if (t < T.stopsA[0]) return 0;
-      if (t < T.cone) return clamp01((M.stopA(t) - 1) / 7);
-      if (t < T.chart) return 0.75;
+      if (t < T.apIntro) return clamp01((M.stopA(t) - 1) / 7);
+      if (t < T.turn) return 0.85;
+      if (t < T.back) return 0.75;
       if (t < T.stopsD[0]) return 0;
       if (t < T.answer) return clamp01((M.stopD(t) - 1) / 7);
-      return 0.85;
+      return 0.8;
     }
     const detuneAt = (t) => 3 + 16 * (1 - sharpness(t));
     const cutoffAt = (t) => 760 * Math.pow(2.5, sharpness(t));
@@ -304,59 +305,92 @@
       Bbm: { bass: 34, pad: [56, 61, 65, 72] },
       Cm: { bass: 36, pad: [55, 58, 63, 67] },
     };
-    // bar -> [chord, pad level, arp level, bass level]
-    const plan = {
-      1: ["Ab", 1.25, 0, 0.8], 2: ["Ab", 1.3, 0.45, 0.9], 3: ["Fm", 1.3, 0.5, 0.95], 4: ["Ebs", 1.15, 0.8, 1],
-      5: ["Ab", 1, 0.8, 1], 6: ["Fm", 1, 1, 1], 7: ["Db", 1, 1, 1], 8: ["Ebs", 1, 0.9, 1], 9: ["Ab", 1, 0.9, 1],
-      10: ["Fm", 1, 0.8, 1], 11: ["Db", 1, 0.7, 1], 12: ["Cm", 0.9, 0.6, 0.9], 13: ["Ebs", 0.9, 0.7, 1],
-      14: ["Fm", 1.15, 1, 1.15], 15: ["Db", 1, 1, 1], 16: ["Bbm", 1, 0.9, 1], 17: ["Ebs", 1.05, 0.9, 1.05],
-      18: ["Ab", 1.3, 0.8, 1.15], 19: ["Fm", 1.35, 0.9, 1.2], 20: ["Db", 1.05, 0.5, 1.05], 21: ["Eb", 1.1, 0.5, 1.1],
-      22: ["Ab", 1.2, 1.1, 1.2], 23: ["Fm", 1.05, 1, 1.05],
-      24: ["Db", 1, 0.9, 1], 25: ["Ab", 1, 1, 1], 26: ["Fm", 1, 1, 1], 27: ["Ebs", 1.05, 1, 1.05], 28: ["Ab", 1.25, 0.8, 1.2], 29: ["Ab", 0.9, 0.3, 0.8],
-    };
+    // The plan, a section at a time: [first bar, chords, pad, arp, bass, arp density].
+    // Density: 2 plays every eighth, 1 every quarter, 0 the downbeat and the middle.
+    // The arpeggio runs in full only while the aperture clicks; elsewhere it leaves room to read.
+    const SECTIONS = [
+      [1, ["Ab"], 1.25, 0, 0.8, 1],
+      [2, ["Ab", "Fm", "Ebs", "Ab"], 1.25, 0.5, 0.95, 1], // the racks
+      [6, ["Db", "Eb"], 1, 1, 1, 2], // the stop-down
+      [8, ["Ab", "Fm"], 1.1, 0.5, 0.95, 0], // the question
+      [10, ["Db", "Ab", "Fm"], 1.05, 0.45, 0.95, 1], // the aperture, named
+      [13, ["Db"], 1, 0.85, 1, 2], // a stop a beat
+      [14, ["Ebs", "Ab", "Ebs"], 1.05, 0.5, 1, 1],
+      [17, ["Ab", "Fm", "Db", "Ebs"], 1, 0.5, 1, 1], // the cone
+      [21, ["Ab", "Fm", "Db", "Ebs"], 1, 0.5, 1, 1],
+      [25, ["Fm", "Db", "Cm", "Ebs"], 1, 0.5, 1, 1], // out of focus
+      [29, ["Fm", "Db", "Bbm", "Ebs"], 1, 0.5, 1, 1],
+      [33, ["Ab", "Fm", "Db", "Ebs"], 1.05, 0.55, 1, 1], // the iris shrinks the disc
+      [37, ["Fm", "Db", "Cm", "Ebs"], 1, 0.4, 0.95, 0], // the question
+      [41, ["Fm", "Db", "Bbm", "Ebs"], 1, 0.45, 1, 1], // pixels
+      [45, ["Fm", "Db", "Cm", "Ebs"], 1, 0.5, 1, 1], // grain, cones
+      [49, ["Fm", "Db"], 1.05, 0.6, 1.05, 1],
+      [51, ["Ab", "Fm", "Db", "Ebs"], 1.15, 0.8, 1.1, 2], // one arcminute
+      [55, ["Fm", "Db"], 1, 0.5, 1, 1],
+      [57, ["Ab", "Fm", "Db", "Ebs"], 1.1, 0.45, 1, 1], // the circle of confusion
+      [61, ["Ab", "Fm", "Db", "Ebs"], 1.2, 0.5, 1.1, 1], // back to the dominoes, the chart
+      [65, ["Ab", "Fm", "Db", "Ebs"], 1.2, 0.55, 1.1, 1],
+      [69, ["Ab", "Fm", "Db", "Ebs", "Fm", "Db", "Bbm", "Ebs", "Eb"], 1, 1, 1.05, 2], // the stops, the swing
+      [78, ["Ab", "Fm", "Db", "Ebs", "Ab"], 1.2, 0.7, 1.1, 1], // the answer
+      [83, ["Fm", "Db", "Ebs"], 1, 0.45, 1, 1], // the chain
+      [86, ["Ab", "Db", "Ebs"], 1.1, 0.9, 1.1, 2],
+      [89, ["Fm", "Db", "Bbm", "Cm", "Ebs"], 1, 0.4, 0.95, 1], // who draws the ring
+      [94, ["Ab", "Ab", "Ab"], 1.15, 0.3, 0.85, 0], // the lockup
+    ];
+    const plan = {};
+    for (const [b0, chords, padL, arpL, bassL, dens] of SECTIONS) {
+      chords.forEach((c, k) => (plan[b0 + k] = [c, padL, arpL, bassL, dens]));
+    }
+    const LAST = Math.ceil(DURATION / (4 * BEAT));
     const ARP = [3, 2, 1, 2, 3, 1, 2, 0];
-    for (const [barS, [name, padL, arpL, bassL]] of Object.entries(plan)) {
+    for (const [barS, [name, padL, arpL, bassL, dens]] of Object.entries(plan)) {
       const bar = Number(barS);
+      if (bar > LAST) continue;
       const t0 = at(bar);
       const ch = CH[name];
       const startAt = bar === 1 ? 0.35 : t0;
-      const dur = at(bar + 1) - startAt;
+      const dur = Math.min(at(bar + 1), DURATION) - startAt;
       ch.pad.forEach((m, k) => {
         put(music, startAt, padNote(m, startAt, dur + 0.05, 1 + 0.12 * k), 0.034 * padL, k % 2 ? 0.45 : -0.45, 0.5);
       });
       for (let b = 0; b < 4; b += 2) {
         const tb = t0 + b * BEAT;
-        if (tb < startAt - 1e-6) continue;
+        if (tb < startAt - 1e-6 || tb > DURATION - 1) continue;
         put(music, tb, sub(ch.bass, BEAT * 2 - 0.04, 0.55), 0.075 * bassL, 0, 0);
       }
       if (arpL > 0) {
         for (let k = 0; k < 8; k++) {
+          if (dens === 1 && k % 2) continue;
+          if (dens === 0 && k % 4) continue;
           const t = t0 + k * (BEAT / 2);
-          if (bar >= 29 && (k % 2 || k > 4)) continue;
+          if (t > DURATION - 1.5) continue;
           const note = ch.pad[ARP[k]] + 12;
           const vel = (k % 2 ? 0.7 : 1) * (k === 0 ? 1.15 : 1);
           // blurred passages play the arpeggio softer and duller
           const sh = sharpness(t);
-          put(music, t, glass(note, vel, 0.42, 0.9 + 0.9 * sh), 0.05 * arpL * (0.7 + 0.3 * sh), ((k % 4) - 1.5) * 0.35, 0.35, 0.3);
+          put(music, t, glass(note, vel, 0.42 + 0.12 * (2 - dens), 0.9 + 0.9 * sh), 0.05 * arpL * (0.7 + 0.3 * sh), ((k % 4) - 1.5) * 0.35, 0.35, 0.3);
         }
       }
     }
     // the lockup chord rings out
-    put(music, at(28, 1), glass(75, 1, 1.5), 0.05, 0, 0.6, 0.2);
-    put(music, at(28, 1), glass(84, 0.8, 1.7), 0.04, 0.3, 0.6, 0.2);
-    put(music, at(28, 1), glass(79, 0.7, 1.6), 0.035, -0.3, 0.6, 0.2);
+    put(music, T.lockup, glass(75, 1, 1.5), 0.05, 0, 0.6, 0.2);
+    put(music, T.lockup, glass(84, 0.8, 1.7), 0.04, 0.3, 0.6, 0.2);
+    put(music, T.lockup, glass(79, 0.7, 1.6), 0.035, -0.3, 0.6, 0.2);
 
-    // drums under the eye and the chart, bars 14 to 17 and 20 to 23
-    for (const bar of [14, 15, 16, 17, 20, 21, 22, 23]) {
-      for (let b = 0; b < 4; b++) {
-        const t = at(bar, b);
-        if (b === 0 || b === 2) put(music, t, kick(), bar >= 20 ? 0.36 : 0.32, 0, 0.05);
-        if ((b === 1 || b === 3) && bar >= 15) put(music, t, noiseHit(1900, 1.2, 0.02), 0.16, 0.1, 0.2);
-      }
-      for (let k = 0; k < 16; k++) {
-        const t = at(bar) + k * (BEAT / 4);
-        const acc = k % 4 === 2 ? 1 : k % 2 ? 0.45 : 0.7;
-        put(music, t, noiseHit(7200, 0.9, 0.022), 0.055 * acc, 0.25, 0.1);
+    // drums under the eye, under the stop-down, and under the chain
+    const DRUMS = [[50, 54, 2], [69, 77, 2], [86, 88, 1]];
+    for (const [b0, b1, kit] of DRUMS) {
+      for (let bar = b0; bar <= b1; bar++) {
+        for (let b = 0; b < 4; b++) {
+          const t = at(bar, b);
+          if (b === 0 || b === 2) put(music, t, kick(), 0.32, 0, 0.05);
+          if ((b === 1 || b === 3) && bar > b0 && kit === 2) put(music, t, noiseHit(1900, 1.2, 0.02), 0.15, 0.1, 0.2);
+        }
+        for (let k = 0; k < 16; k += kit === 2 ? 1 : 2) {
+          const t = at(bar) + k * (BEAT / 4);
+          const acc = k % 4 === 2 ? 1 : k % 2 ? 0.45 : 0.7;
+          put(music, t, noiseHit(7200, 0.9, 0.022), 0.05 * acc, 0.25, 0.1);
+        }
       }
     }
 
@@ -384,6 +418,20 @@
       put(fx, t, thump(200, 110, 0.02), 0.14 * g, 0, 0);
       put(fx, t, ping(mtof(SCALE[k - 1]), 0.09, 0.15, 0.5), 0.07 * g, 0, 0.25, 0.12);
     }
+    // a soft sign that a caption has something new: one glass note
+    const note = (t, m, g = 1, pan = 0) => put(fx, t, glass(m, 0.6, 0.5), 0.03 * g, pan, 0.5, 0.2);
+    // a pitch glide by a ratio, for things that grow or shrink
+    function glide(t0, dur, f0, ratio, gain) {
+      const out = new Float32Array(len(dur));
+      let ph = 0;
+      for (let i = 0; i < out.length; i++) {
+        const x = i / out.length;
+        ph += (f0 * Math.pow(ratio, x)) / SR;
+        out[i] = Math.sin(TAU * ph) * Math.sin(Math.PI * x) * 0.6;
+      }
+      put(fx, t0, out, gain, 0, 0.3, 0.15);
+    }
+    const easeIO = (x) => (x < 0 ? 0 : x > 1 ? 1 : x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 
     // A. the iris opens on an impact
     shutter(T.open);
@@ -428,25 +476,44 @@
     // the question
     put(fx, T.why, glass(87, 0.8, 0.6), 0.04, 0.2, 0.5, 0.25);
 
-    // B. the cone
-    whooshAt(T.cone, 0.9, false);
+    // B. the aperture, from the front
+    blades(T.apIntro, 0.9, 0.9); // the iris closes over the picture
+    whooshAt(T.apIntro + 0.8, 1.2, false, 0.16); // and we pull back to the lens
+    note(T.apName, 84, 1, 0.3);
+    blades(T.apOpen, 1.0, 0.8); // wide open
+    put(fx, T.apOpen + 0.3, ping(mtof(80), 0.3, 0.15, 1.5), 0.05, 0, 0.4, 0.2);
+    T.apStops.forEach((t, i) => apClick(t, i + 2, 1));
+    note(T.apLight, 80, 0.9, -0.3);
+    note(T.apHold, 87, 0.8, -0.3);
+    blades(T.apSecond, 1.0, 0.8); // open again
+    put(fx, T.apSecond + 0.2, glass(87, 0.8, 0.6), 0.04, 0.2, 0.5, 0.25);
+    whooshAt(T.turn, 0.9, false, 0.22); // the lens turns edge-on
+
+    // C. the cone
+    put(fx, T.domino, tock(1300, 0.03), 0.12, -0.5, 0.2);
     {
       // light leaving a point: a sparkle of high glass
       for (let k = 0; k < 14; k++) {
-        const tt = T.burst + k * 0.035 + rnd() * 0.02;
+        const tt = T.burst + k * 0.05 + rnd() * 0.03;
         put(fx, tt, glass(84 + ((k * 5) % 12), 0.5, 0.18, 1.2), 0.02, (rnd() * 2 - 1) * 0.8, 0.5);
       }
     }
-    whooshAt(T.fold, 0.6, false, 0.18);
-    put(fx, T.fold + 0.38, ping(mtof(87), 0.25, 0.1), 0.06, 0, 0.4, 0.2);
-    whooshAt(T.nearer, 0.55, true, 0.2);
-    whooshAt(T.farther, 0.6, false, 0.2);
-    blades(T.irisB, 0.4, 0.8);
-    blades(T.irisBOpen, 0.4, 0.8);
+    whooshAt(T.cone, 1.0, false, 0.16);
+    whooshAt(T.fold, 0.8, false, 0.16);
+    put(fx, T.fold + 0.6, ping(mtof(87), 0.25, 0.1), 0.06, 0, 0.4, 0.2);
+    note(T.inFocusB, 91, 0.8, 0.2);
+    whooshAt(T.nearer, 0.7, true, 0.2);
+    note(T.discNear, 80, 0.8, 0.3);
+    whooshAt(T.farther, 0.8, false, 0.2);
+    note(T.discFar, 80, 0.8, -0.3);
+    whooshAt(T.bridge, 0.9, true, 0.18); // the disc becomes the blur in the photograph
+    blades(T.irisB, 0.6, 0.8);
+    blades(T.irisBOpen, 0.6, 0.8);
+    put(fx, T.question, glass(87, 0.8, 0.6), 0.04, 0.2, 0.5, 0.25);
     // the focus tone: three voices on E-flat that spread apart as the disc grows
     {
       const t0 = T.fold + 0.3;
-      const t1 = T.grid + 0.5;
+      const t1 = T.question + 1.5;
       const out = new Float32Array(len(t1 - t0));
       const f = mtof(75);
       const ph = [0, 0, 0];
@@ -460,13 +527,13 @@
           ph[k] += fr[k] / SR;
           v += Math.sin(TAU * ph[k]);
         }
-        const env = Math.min(1, (t - t0) / 0.3) * Math.min(1, (t1 - t) / 0.4);
+        const env = Math.min(1, (t - t0) / 0.3) * Math.min(1, (t1 - t) / 1.2);
         out[i] = (v / 3) * env;
       }
-      put(fx, t0, out, 0.035, 0, 0.3);
+      put(fx, t0, out, 0.03, 0, 0.3);
     }
 
-    // C. the mosaics
+    // D. the limit: the mosaics
     whooshAt(T.grid - 0.15, 1.0, false, 0.26);
     for (const s of [{ t: T.dot, f: 2093 }, { t: T.smallDisc, f: 2093 }]) {
       put(fx, s.t, glass(91, 0.5, 0.12), 0.03, 0, 0.3);
@@ -497,30 +564,27 @@
     whooshAt(T.print, 0.7, false, 0.16);
     whooshAt(T.shrink, 0.6, true, 0.16);
     // the print shrinks back to the sensor: a falling glide
-    {
-      const t0 = T.shrink + 1.25;
-      const out = new Float32Array(len(0.6));
-      let ph = 0;
-      for (let i = 0; i < out.length; i++) {
-        const x = i / out.length;
-        ph += (1400 * Math.pow(1 / 4.17, x)) / SR;
-        out[i] = Math.sin(TAU * ph) * Math.sin(Math.PI * x) * 0.6;
-      }
-      put(fx, t0, out, 0.05, 0, 0.3, 0.15);
-    }
+    glide(T.shrink2, 0.6, 1400, 1 / 4.17, 0.05);
     whooshAt(T.coc - 0.4, 0.8, false, 0.24);
     // the ring lands: the circle of confusion
     put(fx, T.coc + 0.35, ping(mtof(87), 0.4, 0.2, 2), 0.08, 0, 0.4, 0.2);
     put(fx, T.coc + 0.35, ping(mtof(94), 0.3, 0.1, 1.6), 0.035, 0.2, 0.4);
     put(fx, T.cocLabel, glass(91, 0.6, 0.5), 0.03, -0.2, 0.5, 0.2);
 
-    // D. the chart
-    whooshAt(T.chart, 0.6, false, 0.16);
+    // E. the zone
+    whooshAt(T.back, 0.9, true, 0.16); // the photograph rises
+    // the dominoes leave the photograph and land on the axis, one after another
     for (let i = 0; i < 8; i++) {
-      const tt = T.chart + 0.25 + Math.abs(i - O.FOCUS_INDEX) * 0.1 + 0.05;
-      put(fx, tt, tock(1700 + 90 * i, 0.02), 0.08, ((i / 7) * 2 - 1) * 0.7, 0.15);
+      put(fx, T.chart + 0.5 + i * 0.07, tock(1700 + 90 * i, 0.02), 0.08, ((i / 7) * 2 - 1) * 0.7, 0.15);
+    }
+    for (let i = 0; i < 8; i++) {
+      const d = Math.abs(i - O.FOCUS_INDEX) * 0.1;
+      const pan = ((i / 7) * 2 - 1) * 0.6;
+      put(fx, T.discs + d + 0.1, glass(84 + ((i * 5) % 12), 0.5, 0.25, 1.2), 0.018, pan, 0.5);
+      put(fx, T.rings + d + 0.12, ping(mtof(SCALE[i]), 0.05, 0.1), 0.035, pan, 0.25);
     }
     put(fx, T.band, ping(mtof(87), 0.3, 0.15), 0.05, 0, 0.4);
+    note(T.band2, 91, 0.8, 0);
     T.stopsD.forEach((t, i) => apClick(t, i + 2, 1));
     // the swing back open and closed again: the ring turning through its detents
     blades(T.sweepOpen, 0.5, 0.7);
@@ -535,12 +599,46 @@
     });
     put(fx, T.light, glass(84, 0.8, 0.8), 0.035, 0, 0.5, 0.2);
 
-    // E. the answer
+    // F. the answer
     blades(T.answer + 0.35, 0.8, 0.9);
     whooshAt(T.answer, 0.9, true, 0.2);
     put(fx, T.inFocus + 0.15, ping(mtof(87), 0.2, 0.1), 0.05, -0.1, 0.3);
+    note(T.rest, 84, 0.8, -0.2);
     put(fx, T.inset, glass(91, 0.6, 0.3), 0.035, 0.4, 0.4);
     put(fx, T.inset + 0.05, whoosh(0.35, 600, 2200, 9), 0.1, 0.4, 0.2);
+
+    // G. the chain, once: each link lands on its own note, then they close in turn
+    const LADDER_PAN = [-0.75, -0.38, 0, 0.38, 0.75];
+    whooshAt(T.recap, 0.8, false, 0.14);
+    LADDER_PAN.forEach((pan, k) => {
+      const tb = T.recap + 0.625 + k * 1.25;
+      put(fx, tb + 0.08, ping(mtof(SCALE[2 * k > 7 ? 7 : 2 * k]), 0.12, 0.15, 0.8), 0.06, pan, 0.35, 0.15);
+      const tr = T.recapRun + k * 0.45;
+      if (k === 0) blades(tr, 1.2, 0.6);
+      glide(tr + 0.1, 1.2, mtof(SCALE[k]) / 2, k === 4 ? 2 : 0.5, 0.035);
+    });
+    note(T.recapRun + 2.5, 91, 0.9, 0);
+
+    // H. who draws the ring
+    whooshAt(T.coda, 0.8, true, 0.16);
+    note(T.closer, 84, 0.8, 0.2);
+    {
+      // the ring shrinks from 0.030 to 0.010 mm: a glide down by three
+      const t0 = T.closer + 1.25;
+      glide(t0, 2.2, 1320, 1 / 3, 0.05);
+      // and the dominoes it no longer holds drop out, one tick each
+      const cocH = (t) => O.coc + (0.01 - O.coc) * easeIO((t - t0) / 2.2);
+      const inside = O.ZS.map((z) => O.disc(z, 16, O.FOCUS) <= O.coc);
+      for (let t = t0; t < t0 + 2.3; t += 0.001) {
+        O.ZS.forEach((z, i) => {
+          if (!inside[i] || O.disc(z, 16, O.FOCUS) <= cocH(t)) return;
+          inside[i] = false;
+          put(fx, t, tock(900 + 60 * i, 0.025), 0.09, ((i / 7) * 2 - 1) * 0.75, 0.12);
+        });
+      }
+    }
+    note(T.thinner, 80, 0.8, -0.2);
+    put(fx, T.who, glass(87, 0.8, 0.8), 0.04, 0, 0.5, 0.25);
     blades(T.close, 0.6, 0.9);
     shutter(T.close + 0.6, 0.8);
     put(fx, T.close + 0.66, thump(95, 42, 0.22), 0.35, 0, 0.2);

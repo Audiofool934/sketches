@@ -14,10 +14,15 @@ for (const f of ["src/clock.js", "src/kit.js", "src/optics.js", "src/motion.js",
 const SR = 48000;
 if (process.argv.includes("--stems")) {
   const { music, fx, lufs } = globalThis.FM.sound.render(SR, { stems: true });
-  const part = (b, a, z) => ({ L: b.L.subarray(a * SR, z * SR), R: b.R.subarray(a * SR, z * SR) });
+  const part = (b, a, z) => ({ L: b.L.subarray(Math.round(a * SR), Math.round(z * SR)), R: b.R.subarray(Math.round(a * SR), Math.round(z * SR)) });
   console.log(`music ${lufs(music).toFixed(1)} LUFS, effects ${lufs(fx).toFixed(1)} LUFS (whole film, before mastering)`);
-  for (const [a, z] of [[0, 10], [10, 22.5], [22.5, 42.5], [42.5, 57.5], [57.5, 72.5]]) {
-    console.log(`  ${a}-${z} s: music ${lufs(part(music, a, z)).toFixed(1)}, effects ${lufs(part(fx, a, z)).toFixed(1)}`);
+  const C = globalThis.FM.clock;
+  for (const [name, a, z] of [
+    ["A puzzle", 0, C.T.apIntro], ["B aperture", C.T.apIntro, C.T.turn], ["C cone", C.T.turn, C.T.question],
+    ["D limit", C.T.question, C.T.back], ["E zone", C.T.back, C.T.answer], ["F answer", C.T.answer, C.T.recap],
+    ["G chain", C.T.recap, C.T.coda], ["H coda", C.T.coda, C.DURATION],
+  ]) {
+    console.log(`  ${name} ${a.toFixed(1)}-${z.toFixed(1)} s: music ${lufs(part(music, a, z)).toFixed(1)}, effects ${lufs(part(fx, a, z)).toFixed(1)}`);
   }
   process.exit(0);
 }
