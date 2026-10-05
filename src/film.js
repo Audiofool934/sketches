@@ -1747,8 +1747,8 @@
       const lk = phase(t, T.lockup, Infinity, SPR.type);
       const lk2 = phase(t, T.lockup + 0.3125, Infinity, SPR.type);
       const lb = { kind: "serif", size: 140, color: C.ink };
-      riseRuns(ctx, [{ s: "Depth of field is" }], W / 2, 500, lb, lk.in, 0, "center");
-      riseRuns(ctx, [{ s: "the blur you " }, { s: "can\u2019t see", italic: true, color: C.accent }, { s: "." }], W / 2, 660, lb, lk2.in, 0, "center");
+      riseRuns(ctx, [{ s: "Sharp is just" }], W / 2, 500, lb, lk.in, 0, "center");
+      riseRuns(ctx, [{ s: "blur you " }, { s: "can\u2019t see", italic: true, color: C.accent }, { s: "." }], W / 2, 660, lb, lk2.in, 0, "center");
     }
   }
 

@@ -25,7 +25,7 @@ The finished film is [`one-arcminute.mp4`](one-arcminute.mp4) in this folder (19
 | 2:30 | The zone | Back to the photograph, and its dominoes move onto a distance axis. Each gets its blur disc at f/1.4 and the 0.03 mm ring; only one fits, and that range is the depth of field, 2.0 cm. The aperture closes a stop at a time; every disc shrinks by √2, dominoes clack as they fit, and the depth grows to 23.5 cm while the light falls to 1/128. Then the aperture swings open and shut again, and the light and the depth trade places. |
 | 3:12.5 | The answer | Through the aperture, back to the picture at f/16. One distance is in focus; a magnifier shows the farthest domino's blur, 0.026 mm, inside the 0.030 mm limit. |
 | 3:25 | The chain | Five small figures in a row: aperture, cone, disc, ring, zone. The aperture closes and every link follows in turn. |
-| 3:40 | Who draws the ring | Print three times bigger or look closer, and the ring shrinks to 0.01 mm: at f/16 only three dominoes still fit and the zone thins to 7.7 cm. Depth of field depends on who is looking. The iris closes on "Depth of field is the blur you can't see." |
+| 3:40 | Who draws the ring | Print three times bigger or look closer, and the ring shrinks to 0.01 mm: at f/16 only three dominoes still fit and the zone thins to 7.7 cm. Depth of field depends on who is looking. The iris closes on "Sharp is just blur you can't see." |
 
 ## The facts it relies on
 

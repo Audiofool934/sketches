@@ -193,7 +193,7 @@ Captions are short serif sentences, at most two lines, placed where the picture 
 - 3:42.5 "Print it three times bigger, or look closer, / and you can see three times finer blur." The ring shrinks from 0.030 to 0.010 mm.
 - 3:47.5 Dominoes fall out of the zone; the band shrinks to 7.7 cm. "The ring shrinks, fewer dominoes fit, / and the sharp zone gets thinner."
 - 3:50 "Depth of field depends on who is looking."
-- 3:52.5 The iris closes. Lockup: "Depth of field is / the blur you can't see." Held to the end.
+- 3:52.5 The iris closes. Lockup: "Sharp is just / blur you can't see." Held to the end.
 
 ## Motion
 
