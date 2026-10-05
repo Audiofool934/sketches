@@ -55,7 +55,8 @@ They do not represent a full human viewing or auditory listening session.
 ## Technical evidence
 
 The completed native render contains 12,379 frames at 8192 by 4320, 60 fps, with four shutter samples per frame.
-The lossless RGB archive contains 75 FFV1 segments totaling 349,267,312,853 bytes.
+The original lossless RGB archive contained 75 FFV1 segments totaling 349,267,312,853 bytes.
+Those regenerable intermediate videos were deleted at the user's request on 2026-10-05, preserving the source, original music, both finished movies, and small render records in `out/render/master-8k-records/`.
 The 8K HEVC 4:2:2 10-bit movie is 27,171,066,274 bytes, and the 4K H.264 movie is 1,848,109,316 bytes.
 The encoder reported zero dropped and zero duplicated frames.
 Both deliveries passed the complete frame-count, dimensions, pixel-format, frame-clock, and source-fingerprint checks.
