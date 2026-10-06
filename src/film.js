@@ -333,7 +333,7 @@
   }
 
   // Iris blades seen side-on: two bars closing in from the rim to half-opening `a`.
-  function irisSide(ctx, x, y, a, rim, alpha) {
+  function irisSide(ctx, x, y, a, rim, alpha, hl = 0) {
     if (alpha <= 0.001 || a >= rim - 0.5) return;
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -345,6 +345,53 @@
       ctx.strokeStyle = C.ink;
       ctx.lineWidth = 2;
       ctx.strokeRect(x - 7, Math.min(y0, y1), 14, Math.abs(y1 - y0));
+      if (hl > 0.001) {
+        ctx.globalAlpha = alpha * hl;
+        ctx.fillStyle = C.accent;
+        ctx.fillRect(x - 7, Math.min(y0, y1), 14, Math.abs(y1 - y0));
+        ctx.globalAlpha = alpha;
+      }
+    }
+    ctx.restore();
+  }
+
+  // The lens from the front, in a small round window: a nine-blade iris over warm light,
+  // closing to the same fraction `f` as the side view's blades. The opening is outlined
+  // and dimensioned in the accent, as the blades are in the side view.
+  function irisFront(ctx, cx, cy, R, f, alpha) {
+    if (alpha <= 0.001) return;
+    const rot = -Math.PI / 2;
+    const r = R * 1.06 * f;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, TAU);
+    ctx.fillStyle = C.ground;
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = "#e9dfc6";
+    ctx.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+    iris(ctx, r, rot, cx, cy, ["#2a303c", "#323947"]);
+    ctx.restore();
+    ctx.strokeStyle = C.ink;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, TAU);
+    ctx.stroke();
+    if (r < R * 1.04) {
+      ctx.strokeStyle = C.accent;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let i = 0; i < 9; i++) {
+        const a = rot + (i * TAU) / 9;
+        const x = cx + r * Math.cos(a);
+        const y = cy + r * Math.sin(a);
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      vdim(ctx, cx, cy - r * 0.97, cy + r * 0.97, C.accent, 1, 3);
     }
     ctx.restore();
   }
@@ -526,7 +573,9 @@
       ctx.stroke();
       // the lens: the front view turned edge-on becomes this
       drawLens(ctx, B.lx, ax, 250, clamp((turnP - 0.5) * 2));
-      if (turnP > 0.5) irisSide(ctx, B.lx, ax, o.a, B.la, clamp((turnP - 0.5) * 2));
+      const ib = phase(t, T.irisB - 0.4, T.irisBOpen + 0.6, SPR.ui, 0.4);
+      const ibOn = clamp(ib.in * 1.3) * (1 - ib.out);
+      if (turnP > 0.5) irisSide(ctx, B.lx, ax, o.a, B.la, clamp((turnP - 0.5) * 2), ibOn);
       const sensP = sp(t - (T.turn + 0.5), SPR.card);
       if (sensP > 0.001) {
         ctx.fillStyle = C.ink;
@@ -583,10 +632,20 @@
       const p0 = sp(t - T.cone, [26, 2 * Math.sqrt(26)]);
       const p1 = sp(t - T.fold, [40, 2 * Math.sqrt(40)]);
       coneB(ctx, o, ax, p0, p1, 1);
+      if (ibOn > 0.001) vdim(ctx, B.lx - 40, ax - o.a, ax + o.a, C.accent, ibOn, 3);
       // the disc the sensor cuts from the cone
       const dv = clamp((o.disc - 6) / 14) * clamp((t - T.behind) / 0.4);
       if (dv > 0.001) vdim(ctx, B.xs + 26, ax - o.disc / 2, ax + o.disc / 2, C.ink, dv);
       ctx.restore();
+    }
+
+    // the front view of the same iris, so the closing blades read as an aperture
+    const pip = phase(t, T.irisB - 0.4, T.irisBOpen + 0.6, SPR.card, 0.4);
+    if (pip.in > 0.001) {
+      const a = clamp(pip.in * 1.3) * (1 - pip.out);
+      const R = 124 * lerp(0.7, 1, Math.min(pip.in, 1));
+      irisFront(ctx, 1640, 172, R, apB(t), a);
+      riseRuns(ctx, [{ s: "front view" }], 1640, 352, { kind: "mono", size: 46, color: C.dim }, pip.in, pip.out, "center");
     }
 
     captions(ctx, t, [
