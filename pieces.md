@@ -12,3 +12,4 @@
 - piece/middle-earth-may-it-be: .pieces/middle-earth-may-it-be/index.html
 - piece/borrowed-lines: .pieces/borrowed-lines/index.html
 - piece/twenty-five-millimeters: .pieces/twenty-five-millimeters/index.html
+- piece/arrakis: .pieces/arrakis/index.html
