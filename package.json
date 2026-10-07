@@ -1,0 +1,13 @@
+{
+  "name": "odyssey-trailers",
+  "private": true,
+  "type": "module",
+  "description": "The two Odyssey trailers re-laid as mosaic films, shot for shot, on the trailers' own audio.",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "render": "node tools/render.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

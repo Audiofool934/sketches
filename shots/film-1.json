@@ -1,0 +1,229 @@
+{
+  "film": 1,
+  "title": "ΟΔΥΣΣΕΙΑ",
+  "audio": 1,
+  "fps": [
+    24,
+    1
+  ],
+  "frames": 2725,
+  "band": [
+    3840,
+    1608
+  ],
+  "audioRate": 48000,
+  "note": "Times are soundtrack seconds. A scene owns the frame from its start; a flow hands over from the scene before it between launch and land. look is the film's own light: [t, fade].",
+  "look": [
+    [
+      0,
+      0.0
+    ],
+    [
+      0.25,
+      0.0
+    ],
+    [
+      1.6,
+      1.0
+    ],
+    [
+      99.0,
+      1.0
+    ],
+    [
+      99.6,
+      0.75
+    ],
+    [
+      103.2,
+      0.75
+    ],
+    [
+      103.6,
+      1.0
+    ],
+    [
+      112.9,
+      1.0
+    ],
+    [
+      113.5,
+      0.0
+    ]
+  ],
+  "scenes": [
+    {
+      "id": "invocation",
+      "picture": "film1/invocation",
+      "start": 0,
+      "end": 16.8,
+      "in": {
+        "type": "laid"
+      }
+    },
+    {
+      "id": "troy",
+      "picture": "film1/troy",
+      "start": 14.44,
+      "end": 39.0,
+      "in": {
+        "type": "flow",
+        "launch": [
+          14.44,
+          15.5
+        ],
+        "land": [
+          15.3,
+          16.6
+        ],
+        "focus": [
+          560,
+          250
+        ]
+      }
+    },
+    {
+      "id": "sea",
+      "picture": "film1/sea",
+      "start": 37.12,
+      "end": 54.4,
+      "in": {
+        "type": "flow",
+        "launch": [
+          37.12,
+          38.0
+        ],
+        "land": [
+          37.9,
+          39.2
+        ],
+        "focus": [
+          1600,
+          660
+        ],
+        "curve": 0.8
+      }
+    },
+    {
+      "id": "cave",
+      "picture": "film1/cave",
+      "start": 52.65,
+      "end": 73.6,
+      "in": {
+        "type": "flow",
+        "launch": [
+          52.0,
+          52.5
+        ],
+        "land": [
+          52.55,
+          52.65
+        ],
+        "focus": [
+          1500,
+          470
+        ]
+      }
+    },
+    {
+      "id": "underworld",
+      "picture": "film1/underworld",
+      "start": 71.99,
+      "end": 85.0,
+      "in": {
+        "type": "flow",
+        "launch": [
+          72.05,
+          72.9
+        ],
+        "land": [
+          72.6,
+          74.4
+        ],
+        "focus": [
+          1500,
+          600
+        ]
+      }
+    },
+    {
+      "id": "sirens",
+      "picture": "film1/sirens",
+      "start": 83.29,
+      "end": 91.6,
+      "in": {
+        "type": "flow",
+        "launch": [
+          83.29,
+          83.9
+        ],
+        "land": [
+          83.8,
+          84.9
+        ],
+        "focus": [
+          1500,
+          640
+        ]
+      }
+    },
+    {
+      "id": "storm",
+      "picture": "film1/storm",
+      "start": 90.0,
+      "end": 100.6,
+      "in": {
+        "type": "flow",
+        "launch": [
+          90.0,
+          90.7
+        ],
+        "land": [
+          90.6,
+          91.8
+        ],
+        "focus": [
+          1500,
+          680
+        ]
+      },
+      "out": {
+        "type": "fall",
+        "at": 99.0,
+        "dur": 0.5,
+        "exitDur": 1.4
+      }
+    },
+    {
+      "id": "ithaca",
+      "picture": "film1/ithaca",
+      "start": 99.0,
+      "end": 111.6,
+      "in": {
+        "type": "laid",
+        "bed": 99.6
+      }
+    },
+    {
+      "id": "title",
+      "picture": "film1/title",
+      "start": 110.26,
+      "end": 113.56,
+      "in": {
+        "type": "flow",
+        "launch": [
+          110.26,
+          111.0
+        ],
+        "land": [
+          110.9,
+          112.0
+        ],
+        "focus": [
+          1500,
+          628
+        ]
+      }
+    }
+  ]
+}
