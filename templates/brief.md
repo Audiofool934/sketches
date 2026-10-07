@@ -24,6 +24,17 @@ Banned: gradient behind a centered title, fade-in on everything, corner labels, 
 
 0.0s
 
+States, when one shape carries the piece:
+
+## Reference
+
+What to take:
+What to leave:
+
+## Sound
+
+Silent, or the clock this picture locks to.
+
 ## Motion
 
 Duration:
