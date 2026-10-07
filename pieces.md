@@ -11,3 +11,4 @@
 - piece/the-road-home: .pieces/the-road-home/index.html
 - piece/middle-earth-may-it-be: .pieces/middle-earth-may-it-be/index.html
 - piece/borrowed-lines: .pieces/borrowed-lines/index.html
+- piece/twenty-five-millimeters: .pieces/twenty-five-millimeters/index.html
