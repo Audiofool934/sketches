@@ -18,9 +18,18 @@ A plain motion loop does not get a pack.
 
 ## Motion method
 
-The spring numbers in `CLAUDE.md` come from the Movez playbook.
-Read it when a film is failing, or when the brief asks for that method.
-"Opus 5.5 Motion Design Prompting Techniques": https://x.com/0xMovez/status/2104576360119206296
+The render contract, the spring numbers, and the critique loop come from Movez's motion-studio course.
+Course: https://x.com/0xMovez/status/2104216919033192746
+Short card of the same method: https://x.com/0xMovez/status/2104576360119206296
+
+Read the course when a film is failing, or when the brief asks for that method.
+These notes already hold the part that applies to a piece.
+Do not copy a one-liner, a prompt, or a repository from the course into a piece.
+The lookalike reels are a warning.
+A piece needs its own idea.
+
+HyperFrames, Remotion, and the other engines named in the course stay outside this repo.
+Read one only when the brief names that tool, and then only for `film`.
 
 Free portions only:
 

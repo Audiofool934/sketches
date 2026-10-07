@@ -35,7 +35,6 @@ function resize() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-window.addEventListener("resize", resize);
 resize();
 
 // Replace frame(). Every mark is a function of t, in seconds, from 0 up to DURATION.
@@ -57,15 +56,30 @@ function frame(t) {
   ctx.fill();
 }
 
-let startedAt = performance.now();
+// The render path calls seek(t) directly. The same t always draws the same pixels.
+window.seek = function (t) {
+  const looped = ((t % DURATION) + DURATION) % DURATION;
+  frame(looped);
+};
 
-function tick(now) {
-  const elapsed = (now - startedAt) / 1000;
-  frame(elapsed % DURATION);
+let shown = 0;
+window.seek(0);
+
+// Live preview only. Under Playwright, navigator.webdriver is set and nothing ticks.
+if (!navigator.webdriver) {
+  const startedAt = performance.now();
+  const tick = (now) => {
+    shown = ((now - startedAt) / 1000) % DURATION;
+    window.seek(shown);
+    requestAnimationFrame(tick);
+  };
   requestAnimationFrame(tick);
 }
 
-requestAnimationFrame(tick);
+window.addEventListener("resize", () => {
+  resize();
+  window.seek(shown);
+});
 </script>
 </body>
 </html>
