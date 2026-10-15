@@ -22,6 +22,8 @@
 <canvas id="stage"></canvas>
 <script>
 const DURATION = 6;
+// A loop wraps time. A one-shot holds its last frame.
+const LOOP = true;
 const BG = "#14120e";
 const INK = "#f3ead7";
 
@@ -39,7 +41,7 @@ window.addEventListener("resize", resize);
 resize();
 
 // Replace frame(). Every mark is a function of t, in seconds, from 0 up to DURATION.
-// The picture at 0 and the picture at DURATION are the same picture.
+// When LOOP is true, the picture at 0 and the picture at DURATION are the same picture.
 function frame(t) {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -59,7 +61,9 @@ function frame(t) {
 
 // The render path calls seek(t) directly. The same t always draws the same pixels.
 window.seek = function (t) {
-  frame(((t % DURATION) + DURATION) % DURATION);
+  frame(LOOP
+    ? ((t % DURATION) + DURATION) % DURATION
+    : Math.min(Math.max(t, 0), DURATION));
 };
 
 // Live preview only. Under Playwright navigator.webdriver is set, and nothing ticks.
