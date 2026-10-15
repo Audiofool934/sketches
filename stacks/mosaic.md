@@ -2,9 +2,10 @@
 
 Stack name in `brief.md`: `mosaic`.
 
-WebGL2 instanced boxes.
-One HTML file.
-No libraries.
+Build it with the `mosaic` skill.
+Its engine was cut out of this sketchbook, from `piece/odyssey-lantern` through `piece/the-road-home`.
+It cuts shaped, bevelled stones along the contours, sets them in mortar, and lights them with real shadows.
+Do not write a new stone renderer for a piece.
 
 A mosaic is still a drawing.
 The stones are the picture.
@@ -12,10 +13,59 @@ Paint flat, with thick contours and a few colors, then snap one color per stone.
 The two grammars below share one way of cutting and setting the stones.
 Leave behind Canvas `fillRect` for the stones, Three.js, and a mosaic filter on a photo.
 
+## Start a piece
+
+Start the branch with `new-piece` as usual.
+The skill's `init` only writes into an empty folder, so run it in a scratch folder and copy the result in.
+Its `index.html` replaces the template page.
+Keep `brief.md`.
+
+```bash
+node ~/.claude/skills/mosaic/scripts/mosaic.mjs init "$TMPDIR/<slug>"
+```
+
+```bash
+cp -R "$TMPDIR/<slug>/." .pieces/<slug>/
+```
+
+`init` copies `engine/` into the piece.
+That copy is the piece's own snapshot, so an old piece still renders after the skill changes.
+Do not add `package.json` or `node_modules` to the piece.
+Capture runs from the skill.
+
+Draw the picture in `scene.js`.
+Set the clock, the frame size, and the scenes in `project.json`.
+The skill can convert a photo, but a piece draws its own picture.
+A reference image is for grammar, not for import.
+
+Read the skill's `references/scene-authoring.md` before the first scene.
+Then work with `inspect`, `preview`, `still`, and `render`.
+Look at a macro still and a full-frame still before a movie.
+
+## The engine and the render contract
+
 The render contract in `CLAUDE.md` applies.
-Headless Chrome needs a real WebGL context.
-Use `--headless=new --use-angle=metal --enable-webgl --ignore-gpu-blocklist`.
+The controller's `seek(t)` draws any time without the frames before it.
+`render` already writes H.264, `yuv420p`, CRF 16, with 4 temporal samples for motion blur.
+Each export leaves a receipt.
+Keep it beside the film.
+
+Capture uses ANGLE Metal on macOS.
 `--disable-gpu` yields an empty canvas.
+When a command fails, fix the environment or the scene.
+Do not fall back to a CSS grid or a flat image.
+
+The cuts below map onto the engine like this.
+
+- A region's `size` sets the stone. Small stones on the figure and large ones on the ground is opus classicum.
+- `contour` courses follow the edges, which is vermiculatum, and musivum when the ground uses them too.
+- `flow` courses with an angle run one way across the field, which is tessellatum.
+- `radial` courses with a center fan out, which is the start of circumactum.
+- Materials are `glass`, `gold`, `silver`, `marble`, `basalt`, `limestone`, `terracotta`, and `emit`. Gold is opt-in.
+- A scene enters as `settled`, `laid`, or `flow`. `laid` is the panel grammar. `flow` is the wall grammar.
+
+One scene layer holds at most 65,535 stones.
+Enlarge the stones or simplify a quiet region when a layer goes over.
 
 ## How the stones are cut
 
