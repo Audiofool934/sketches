@@ -3,3 +3,4 @@ node_modules/
 # The trailer file, review stills, the Phase 0 archive, and every render with trailer audio stay on this machine.
 ref/
 out/
+__pycache__/
