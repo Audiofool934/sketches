@@ -111,14 +111,21 @@ Write this into `brief.md` before the animation, and show it before a long rende
 - Motion rule: springs for arrivals, eases for departures, no overshoot on type.
 - Whether sound exists. A silent loop is complete.
 
+A genre one-liner only tests the renderer.
+The idea has to be in the brief, as states with times.
+When one shape carries the piece, list its states, and make the last state the first.
+
+A reference is one frame, one clip, or a folder of existing pictures.
+Name it before describing the look.
+Say what to take and what to leave.
+Take palette, grid, pacing, camera, and texture.
+Do not take the story, the logo, the characters, or the composition.
+For a clip, write the pacing down before any drawing code.
+
 For a story film, a visible object in one scene becomes the first object of the next.
 Do not hard-cut a deck of slides.
 Do not repeat narration as on-screen text.
 Labels stay short enough to read at phone width.
-
-A reference image or clip is welcome.
-Take its grammar: palette, grid, pacing, camera, texture.
-Do not take its story, logo, characters, or composition.
 
 ## Motion
 
@@ -138,6 +145,8 @@ If the only description of a move is slide, scale, or fade, find a physical idea
 ## Sound
 
 Design the clock before the motion when the piece has sound.
+If a track is supplied, measure it and lock the picture to that grid.
+If none is supplied, synthesize the score on the same clock as the picture.
 State changes land on beats.
 Hero reveals land on downbeats.
 Clicks, pops, thumps, and whooshes can be synthesized in the page.
@@ -163,6 +172,7 @@ Name the three worst problems with timestamps.
 Fix only those seconds.
 Ship when every score holds at 8 or above.
 Also check a fast-action strip, a 360 px phone sheet, and a loop seam.
+Follow the gates in `stacks/film.md` before a full render.
 
 Hunt for overlapping text, blurry scaled type, linear slides, dead beats, and a seam where the loop jumps.
 

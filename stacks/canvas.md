@@ -18,3 +18,10 @@ Do not add a pack to a plain motion loop.
 
 The render contract in `CLAUDE.md` applies.
 Leave behind Remotion, HyperFrames, Three.js, and Blender.
+
+A UI morph stays on this stack.
+It is one shape through named states: size, radius, and color.
+The last state is the first.
+Do not cut between them.
+A cursor may drive the changes.
+The springs in `CLAUDE.md` are the motion.

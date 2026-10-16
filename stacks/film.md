@@ -27,6 +27,23 @@ Voice and music are named in the brief.
 Synthesized clicks, pops, thumps, and whooshes can live in the page.
 A speaking voice or a sung part needs a separate audio model, named there.
 Do not block the picture on that model.
+A key for that model lives outside the brief.
+Name the variable.
+Do not paste the key.
+
+When a figure recurs, lock it before it moves.
+Write its proportions, its palette, its expressions, and what must survive a style change.
+
+Walk these gates, and do not skip to a full render: plan, rig, stills, animatic, full pass, polish, audio, render.
+Keep the MP4, a loop check, a poster frame, and a contact sheet next to the piece.
+
+A video model may supply a move that is hard to draw by hand.
+Redraw that move in the page, and show only the drawn layer.
+Name the model in the brief.
+
+When the same film ships in more than one frame, lay the scenes out from the frame size.
+Reframe the type and the UI.
+Do not crop a wide picture down to a tall one.
 
 The outside write-up of this shape is Hamza Khalid's brand-film setup: https://x.com/humzaakhalid/status/2105203643758895454
 Take the scene order, the real screens, and the lockup.
